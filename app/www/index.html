@@ -81,6 +81,10 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 <label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:6px 0"><input type="checkbox" id="pinOpt"> Use a PIN code (4 to 6 digits)</label>
 <div class="row"><button class="pb" id="pinChange" style="display:none">Change PIN</button></div>
 <small>The PIN works on phones with no fingerprint sensor. It keeps people who pick up your phone out of the app.</small></div>
+<div class="sec"><b>🎧 Hands-free</b>
+<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:10px 0 6px"><input type="checkbox" id="needWake"> Only answer when I say the wake word</label>
+<input id="wakeW" placeholder="Wake word (default: morales)" autocapitalize="off">
+<small>Hands-free keeps working with the screen off or other apps open. A notification shows while it listens; tap Stop there to end it. It stops by itself after 30 quiet minutes. The wake word stops it from reacting to random talking.</small></div>
 <div class="sec"><b>🔔 Notifications</b>
 <label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:10px 0 0"><input type="checkbox" id="notifOpt"> Buzz me for PC alarms, homework due, and answers</label>
 <small>Alarms and homework from your USB Desktop are copied to this phone, so they ring here even when the app is closed.</small></div>
@@ -204,13 +208,14 @@ setTimeout(resume,1200);
 $('send').onclick=()=>send($('t').value);$('t').onkeydown=e=>{if(e.key==='Enter')send($('t').value)};
 let hf=false,lastReply='';
 async function startListen(){
-  if(!SR||listening||busy)return false;
+  if(!SR||listening||busy||hfNative)return false;
   try{const p=await SR.requestPermissions();if(p.speechRecognition&&p.speechRecognition!=='granted'){add('Allow the microphone for USB Link in Android settings.','sys');return false}
     heard='';listening=true;$('mic').classList.add('rec');await SR.start({language:'en-US',partialResults:true,popup:false,maxResults:1});return true}
   catch(e){listening=false;$('mic').classList.remove('rec');add('Mic error: '+(e.message||e),'sys');return false}
 }
 async function toggleMic(){
   if(!SR){add('Voice needs the Android app.','sys');return}
+  if(hfNative){add('Hands-free is on. Tap 🎧 to stop it first.','sys');return}
   if(listening){try{await SR.stop()}catch(e){}return}
   startListen();
 }
@@ -219,13 +224,41 @@ if(SR){SR.addListener('partialResults',d=>{if(d.matches&&d.matches[0]){heard=d.m
   SR.addListener('listeningState',async d=>{
     if(d.status!=='stopped')return;listening=false;$('mic').classList.remove('rec');const h=heard;heard='';
     if(h){lastReply='';await send(h);if(hf&&lastReply)await speakAsync(lastReply)}
-    if(hf&&!document.hidden)setTimeout(startListen,700);
+    if(hf&&!hfNative&&!document.hidden)setTimeout(startListen,700);
   })}
-function setHf(on){hf=on;$('hfBtn').classList.toggle('on',on);status();if(on){add('🎧 Hands-free is on. Just talk; I answer out loud. Tap 🎧 to stop.','sys');startListen()}else{try{SR&&SR.stop()}catch(e){};try{speechSynthesis.cancel()}catch(e){}}}
-$('hfBtn').onclick=()=>{if(!SR){add('Hands-free needs the Android app.','sys');return}setHf(!hf)};
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&hf)setHf(false)});
+const HF=cap&&cap.Plugins&&cap.Plugins.HandsFree;let hfNative=false,hfPoll=null;
+async function drainHf(){
+  if(!HF)return;
+  try{const r=await HF.isRunning();const run=!!r.running;
+    if(run!==hf||run!==hfNative){hf=run;hfNative=run;$('hfBtn').classList.toggle('on',run);status()}
+    const l=await HF.getLog();for(const m of (l.log||[])){add(m.text,m.role==='me'?'me':(m.role==='ai'?'ai':'sys'))}
+    if(!run&&hfPoll){clearInterval(hfPoll);hfPoll=null}
+  }catch(e){}
+}
+function setHf(on){
+  if(HF){return setHfNative(on)}
+  hf=on;$('hfBtn').classList.toggle('on',on);status();if(on){add('🎧 Hands-free is on. Just talk; I answer out loud. Tap 🎧 to stop. (It pauses when you leave the app. Update the app for background mode.)','sys');startListen()}else{try{SR&&SR.stop()}catch(e){};try{speechSynthesis.cancel()}catch(e){}}
+}
+async function setHfNative(on){
+  if(!on){try{await HF.stop()}catch(e){};hf=false;hfNative=false;$('hfBtn').classList.remove('on');status();add('🎧 Hands-free stopped.','sys');return}
+  try{
+    if(SR){const p=await SR.requestPermissions();if(p.speechRecognition&&p.speechRecognition!=='granted'){add('Allow the microphone for USB Link in Android settings.','sys');return}}
+    try{if(LN)await LN.requestPermissions()}catch(e){}
+    const c=cfg();if(listening){try{await SR.stop()}catch(e){}}
+    await HF.start({url:c.url,code:c.code,wake:(L.wake||'morales'),needWake:L.needwake!=='0'});
+    hf=true;hfNative=true;$('hfBtn').classList.add('on');status();
+    add('🎧 Hands-free is running in the background'+(L.needwake!=='0'?'. Say “'+(L.wake||'morales')+'” and then what you want.':'. Just talk.')+' Stop it from the notification or tap 🎧.','sys');
+    if(!hfPoll)hfPoll=setInterval(drainHf,4000);
+  }catch(e){add('⚠ Hands-free: '+(e.message==='mic-permission'?'allow the microphone for USB Link first.':(e.message||e)),'sys')}
+}
+$('hfBtn').onclick=()=>{if(!SR&&!HF){add('Hands-free needs the Android app.','sys');return}setHf(!hf)};
+$('wakeW').onchange=()=>{L.wake=$('wakeW').value.trim()};
+$('needWake').onchange=()=>{L.needwake=$('needWake').checked?'1':'0'};
+setTimeout(()=>{drainHf().then(()=>{if(hfNative&&!hfPoll)hfPoll=setInterval(drainHf,4000)})},900);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)drainHf()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&hf&&!hfNative)setHf(false)});
 $('mic').onclick=toggleMic;document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>send(c.textContent));
-$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';syncLockUi();$('notifOpt').checked=L.notif==='1';$('updNote').checked=L.updnote!=='0';$('verTxt').textContent='Build '+(L.build||'?');$('set').style.display='flex'};
+$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';syncLockUi();$('wakeW').value=L.wake||'';$('needWake').checked=L.needwake!=='0';$('notifOpt').checked=L.notif==='1';$('updNote').checked=L.updnote!=='0';$('verTxt').textContent='Build '+(L.build||'?');$('set').style.display='flex'};
 $('save').onclick=()=>{L.url=$('url').value.trim();L.code=$('code').value.trim();L.speak=$('speak').checked?'1':'0';$('set').style.display='none';status()};
 $('clear').onclick=()=>{$('log').innerHTML='';saveLog()};
 if(!cfg().url)add('Welcome! Tap Settings, add your server address and a pairing code, then tap 🎤 and talk.','sys');

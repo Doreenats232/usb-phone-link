@@ -2,7 +2,7 @@ name: build-apk
 on:
   push:
     branches: [main]
-    paths: ['app/package.json', 'app/capacitor.config.json', 'app/icon/**', '.github/workflows/build.yml']
+    paths: ['app/package.json', 'app/capacitor.config.json', 'app/icon/**', 'app/native/**', '.github/workflows/build.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -21,6 +21,15 @@ jobs:
           npm install
           npx cap add android
           npx cap sync android
+      - name: Hands-free service (native code)
+        working-directory: app
+        run: |
+          D=android/app/src/main/java/com/daglas/usblink
+          ls $D
+          cp native/*.java $D/
+          M=android/app/src/main/AndroidManifest.xml
+          grep -q HandsFreeService $M || sed -i 's#</application>#    <service android:name=".HandsFreeService" android:exported="false" android:foregroundServiceType="microphone" />\n    </application>#' $M
+          grep -q FOREGROUND_SERVICE_MICROPHONE $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />\n    <uses-permission android:name="android.permission.WAKE_LOCK" />\n</manifest>#' $M
       - name: Permissions and speech service
         working-directory: app
         run: |
