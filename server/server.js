@@ -24,6 +24,7 @@ setInterval(() => {
 }, 60e3);
 
 app.get('/', (_, res) => res.send('USB phone link is running.'));
+app.get('/ui.html', (_, res) => res.set('Cache-Control', 'no-store').sendFile(require('path').join(__dirname, 'ui.html')));
 
 // phone -> send a command
 app.post('/api/send', (req, res) => {

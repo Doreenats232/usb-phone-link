@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>USB Link</title>
+<meta name="ui-version" content="2"><title>USB Link</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#14141f;color:#eee;font:16px system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
 header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#1c1c2b}
@@ -27,26 +27,27 @@ header b{flex:1}button{border:0;border-radius:12px;background:#2a2a40;color:#eee
 </div>
 <script>
 const $=id=>document.getElementById(id), L=localStorage;
+const UIV=2, DEF="https://usb-phone-link.onrender.com";
 const cap=window.Capacitor, SR=cap&&cap.Plugins&&cap.Plugins.SpeechRecognition;
 let busy=false, listening=false, heard='';
-const cfg=()=>({url:(L.url||'').trim().replace(/\/$/,''),code:(L.code||'').trim()});
+const cfg=()=>({url:(L.url||DEF).trim().replace(/\/$/,''),code:(L.code||'').trim()});
 function add(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('log').appendChild(d);$('log').scrollTop=1e9;saveLog()}
-function saveLog(){L.log=JSON.stringify([...$('log').children].slice(-60).map(e=>[e.className.replace('m ',''),e.textContent]))}
+function saveLog(){L.log=JSON.stringify([...$('log').children].filter(e=>e.textContent!=='···').slice(-60).map(e=>[e.className.replace('m ',''),e.textContent]))}
 try{JSON.parse(L.log||'[]').forEach(([c,t])=>{const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('log').appendChild(d)})}catch{}
 async function api(path,opt={}){const {url,code}=cfg();if(!url||code.length<8)throw new Error('Open Settings: add the server address and an 8+ character pairing code.');
   const r=await fetch(url+path,{...opt,headers:{'x-pair':code,'content-type':'application/json'}});const j=await r.json();if(!r.ok)throw new Error(j.error||('Error '+r.status));return j}
 async function status(){try{const s=await api('/api/status');$('dot').className='dot '+(s.usbOnline?'on':'off');$('st').textContent=s.usbOnline?'USB online':'USB not connected'}catch(e){$('dot').className='dot';$('st').textContent=''}}
 async function send(text){
-  text=(text||'').trim();if(!text||busy)return;busy=true;$('t').value='';add(text,'me');
+  text=(text||'').trim();if(!text||busy)return;busy=true;$('t').value='';add(text,'me');let ty=null;
   try{
     const {id}=await api('/api/send',{method:'POST',body:JSON.stringify({text})});
-    const start=Date.now();let note=false;
+    const start=Date.now();let note=false;ty=document.createElement('div');ty.className='m ai';ty.textContent='···';$('log').appendChild(ty);$('log').scrollTop=1e9;
     while(Date.now()-start<5*60e3){
       const r=await api('/api/result?id='+encodeURIComponent(id));
-      if(r.done){add(r.text,'ai');if(L.speak==='1')try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch{};break}
+      if(r.done){ty&&ty.remove();add(r.text,'ai');if(L.speak==='1')try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch{};break}
       if(!r.usbOnline&&!note){note=true;add('USB Desktop is not connected. Open it on the PC (Settings → Phone link → On).','sys')}
     }
-  }catch(e){add('⚠ '+e.message,'sys')}
+  }catch(e){try{ty&&ty.remove()}catch{};add('⚠ '+e.message,'sys')}
   busy=false;status();
 }
 $('send').onclick=()=>send($('t').value);$('t').onkeydown=e=>{if(e.key==='Enter')send($('t').value)};
@@ -67,4 +68,22 @@ $('save').onclick=()=>{L.url=$('url').value.trim();L.code=$('code').value.trim()
 $('clear').onclick=()=>{$('log').innerHTML='';saveLog()};
 if(!cfg().url)add('Welcome! Tap Settings, add your server address and a pairing code, then tap 🎤 and talk.','sys');
 status();setInterval(status,20000);
-</script></body></html>
+// ---- updates: UI hot-updates from the server (no new APK), native updates via the release page ----
+const B=+'__BUILD__';if(B)L.build=B;
+function applyHot(h){L.uiTry='1';document.open();document.write(h);document.close()}
+setTimeout(()=>{L.uiTry=''},4000);
+async function checkUpdates(){
+  try{const u=cfg().url;const r=await fetch(u+'/ui.html',{cache:'no-store'});if(r.ok){const h=await r.text();const m=h.match(/ui-version" content="(\d+)"/);
+    if(m&&+m[1]>Math.max(UIV,+L.uiVer||0)&&h.includes('</html>')){L.uiHtml=h;L.uiVer=m[1];if(!window.__hot){window.__hot=1;applyHot(h);return}}}}catch{}
+  try{const r=await fetch('https://api.github.com/repos/Doreenats232/usb-phone-link/releases/latest');const j=await r.json();const n=+(String(j.tag_name||'').split('.').pop());
+    if(n&&L.build&&n>+L.build&&!$('upd')){const d=document.createElement('div');d.id='upd';d.className='m sys';d.style.cssText='background:#2a2a40;padding:10px 14px;border-radius:12px';d.innerHTML='New app version available. <u style="color:#9d86ff">Tap to download</u>';
+      d.onclick=()=>{location.href='https://github.com/Doreenats232/usb-phone-link/releases/download/'+j.tag_name+'/UsbLink.apk'};$('log').appendChild(d)}}catch{}
+}
+setTimeout(checkUpdates,1500);
+
+</script><script>
+window.addEventListener('load',()=>{try{const L=localStorage,UIV=2;
+  if(L.uiTry==='1'){L.uiHtml='';L.uiVer='';L.uiTry=''}   // last hot UI never started: drop it
+  if(L.uiHtml&&(+L.uiVer||0)>UIV&&!window.__hot){window.__hot=1;L.uiTry='1';document.open();document.write(L.uiHtml);document.close()}}catch{}});
+</script>
+</body></html>
