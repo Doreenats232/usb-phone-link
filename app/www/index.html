@@ -1,29 +1,52 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="ui-version" content="2"><title>USB Link</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#14141f;color:#eee;font:16px system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
-header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#1c1c2b}
-.dot{width:12px;height:12px;border-radius:50%;background:#888}.dot.on{background:#3ddc84}.dot.off{background:#e55}
-header b{flex:1}button{border:0;border-radius:12px;background:#2a2a40;color:#eee;padding:10px 14px;font-size:15px}
-#log{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
-.m{max-width:85%;padding:10px 13px;border-radius:16px;white-space:pre-wrap;word-break:break-word}
-.me{align-self:flex-end;background:#7c5cf0}.ai{align-self:flex-start;background:#26263a}.sys{align-self:center;color:#999;font-size:13px}
-#bar{display:flex;gap:8px;padding:10px;background:#1c1c2b;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
-#t{flex:1;border:0;border-radius:20px;background:#2a2a40;color:#fff;padding:12px 16px;font-size:16px;outline:none}
-#mic{width:52px;height:52px;border-radius:50%;background:#7c5cf0;font-size:22px;padding:0}#mic.rec{background:#e55}
-#send{background:#7c5cf0}
-#set{position:fixed;inset:0;background:#14141f;padding:20px;display:none;flex-direction:column;gap:10px;padding-top:calc(20px + env(safe-area-inset-top))}
-#set label{color:#aaa;font-size:14px}#set input{border:0;border-radius:10px;background:#2a2a40;color:#fff;padding:12px;font-size:16px}
+:root{--bg1:#0d0b1f;--bg2:#1a1245;--glass:rgba(255,255,255,.07);--line:rgba(255,255,255,.10);--acc:#8b6cff;--acc2:#38d6ff;--txt:#f1f0ff;--sub:#9b98c4}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;color:var(--txt);font:16px/1.4 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;flex-direction:column;
+ background:radial-gradient(900px 500px at 85% -10%,#3a2a9a55,transparent),radial-gradient(700px 500px at -10% 110%,#0b8fb455,transparent),linear-gradient(160deg,var(--bg1),var(--bg2));
+ padding-top:env(safe-area-inset-top)}
+header{display:flex;align-items:center;gap:12px;margin:10px 12px 0;padding:10px 12px;border-radius:22px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px)}
+.av{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 6px 18px #8b6cff66;position:relative}
+.dot{position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;border-radius:50%;background:#777;border:2.5px solid #1a1245}
+.dot.on{background:#3ddc84;box-shadow:0 0 10px #3ddc84}.dot.off{background:#ff5d6c}
+.ti{flex:1;min-width:0}.ti b{display:block;font-size:17px;letter-spacing:.2px}.ti span{font-size:12.5px;color:var(--sub)}
+button{border:0;font:inherit;color:var(--txt);cursor:pointer}
+.ib{width:40px;height:40px;border-radius:14px;background:var(--glass);border:1px solid var(--line);font-size:18px}
+#log{flex:1;overflow:auto;padding:16px 14px 6px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.m{max-width:84%;padding:11px 14px;border-radius:20px;white-space:pre-wrap;word-break:break-word;animation:pop .25s ease;box-shadow:0 4px 14px #0004}
+.me{align-self:flex-end;background:linear-gradient(135deg,var(--acc),#6a4cf0);border-bottom-right-radius:6px}
+.ai{align-self:flex-start;background:var(--glass);border:1px solid var(--line);border-bottom-left-radius:6px;backdrop-filter:blur(10px)}
+.sys{align-self:center;max-width:92%;text-align:center;color:var(--sub);font-size:13px;background:transparent;box-shadow:none;padding:4px 10px}
+.typing{letter-spacing:4px;font-weight:700;animation:pulse 1s infinite}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes pulse{50%{opacity:.35}}
+#chips{display:flex;gap:8px;overflow-x:auto;padding:6px 14px 2px;scrollbar-width:none}#chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:8px 14px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:13.5px;color:#d9d4ff}
+.chip:active{background:#8b6cff44}
+#bar{display:flex;align-items:center;gap:8px;margin:8px 12px calc(10px + env(safe-area-inset-bottom));padding:7px;border-radius:30px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px)}
+#t{flex:1;min-width:0;border:0;background:transparent;color:#fff;padding:10px 8px 10px 14px;font-size:16px;outline:none}
+#t::placeholder{color:var(--sub)}
+#mic{width:46px;height:46px;border-radius:50%;font-size:21px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 4px 16px #38d6ff55;padding:0}
+#mic.rec{background:#ff5d6c;animation:ring 1.1s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 #ff5d6caa}100%{box-shadow:0 0 0 16px #ff5d6c00}}
+#send{width:46px;height:46px;border-radius:50%;background:var(--acc);font-size:19px;padding:0}
+#set{position:fixed;inset:0;background:linear-gradient(160deg,var(--bg1),var(--bg2));padding:22px 18px;display:none;flex-direction:column;gap:10px;padding-top:calc(22px + env(safe-area-inset-top));overflow:auto;z-index:5}
+#set h2{margin:0 0 6px}#set label{color:var(--sub);font-size:13.5px;margin-top:6px}
+#set input[type=text],#set input:not([type]){border:1px solid var(--line);border-radius:14px;background:var(--glass);color:#fff;padding:13px;font-size:16px;outline:none}
+.row{display:flex;gap:10px;margin-top:10px}.pb{flex:1;padding:13px;border-radius:14px;background:var(--glass);border:1px solid var(--line)}.pb.main{background:linear-gradient(135deg,var(--acc),#6a4cf0);border:0}
 </style></head><body>
-<header><div class="dot" id="dot"></div><b>USB Link <span id="st" style="font-weight:400;color:#999;font-size:13px"></span></b><button id="bSet">Settings</button></header>
+<header><div class="av">🤖<div class="dot" id="dot"></div></div><div class="ti"><b>USB Link</b><span id="st">Connecting…</span></div><button class="ib" id="bSet">⚙️</button></header>
 <div id="log"></div>
-<div id="bar"><button id="mic">🎤</button><input id="t" placeholder="Tell the USB what to do…"><button id="send">Send</button></div>
+<div id="chips"><button class="chip">Open notepad</button><button class="chip">What time is it?</button><button class="chip">Show my homework</button><button class="chip">Sort my icons A to Z</button><button class="chip">Lock the PC</button></div>
+<div id="bar"><button id="mic">🎤</button><input id="t" placeholder="Message your USB…"><button id="send">➤</button></div>
 <div id="set">
 <h2>Settings</h2>
 <label>Server address</label><input id="url" placeholder="https://your-link.onrender.com" autocapitalize="off">
 <label>Pairing code (same one on the USB Desktop, 8+ characters)</label><input id="code" autocapitalize="off">
-<label><input type="checkbox" id="speak"> Read answers out loud</label>
-<div style="display:flex;gap:8px"><button id="save" style="background:#7c5cf0">Save</button><button id="clear">Clear chat</button></div>
+<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px"><input type="checkbox" id="speak"> Read answers out loud</label>
+<div class="row"><button id="save" class="pb main">Save</button><button id="clear" class="pb">Clear chat</button></div>
 </div>
 <script>
 const $=id=>document.getElementById(id), L=localStorage;
@@ -32,16 +55,16 @@ const cap=window.Capacitor, SR=cap&&cap.Plugins&&cap.Plugins.SpeechRecognition;
 let busy=false, listening=false, heard='';
 const cfg=()=>({url:(L.url||DEF).trim().replace(/\/$/,''),code:(L.code||'').trim()});
 function add(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('log').appendChild(d);$('log').scrollTop=1e9;saveLog()}
-function saveLog(){L.log=JSON.stringify([...$('log').children].filter(e=>e.textContent!=='···').slice(-60).map(e=>[e.className.replace('m ',''),e.textContent]))}
+function saveLog(){L.log=JSON.stringify([...$('log').children].filter(e=>e.textContent!=='···').slice(-60).map(e=>[e.className.replace('m ','').replace(' typing',''),e.textContent]))}
 try{JSON.parse(L.log||'[]').forEach(([c,t])=>{const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('log').appendChild(d)})}catch{}
 async function api(path,opt={}){const {url,code}=cfg();if(!url||code.length<8)throw new Error('Open Settings: add the server address and an 8+ character pairing code.');
   const r=await fetch(url+path,{...opt,headers:{'x-pair':code,'content-type':'application/json'}});const j=await r.json();if(!r.ok)throw new Error(j.error||('Error '+r.status));return j}
-async function status(){try{const s=await api('/api/status');$('dot').className='dot '+(s.usbOnline?'on':'off');$('st').textContent=s.usbOnline?'USB online':'USB not connected'}catch(e){$('dot').className='dot';$('st').textContent=''}}
+async function status(){try{const s=await api('/api/status');$('dot').className='dot '+(s.usbOnline?'on':'off');$('st').textContent=s.usbOnline?'USB online · ready':'USB not connected'}catch(e){$('dot').className='dot';$('st').textContent='Not connected'}}
 async function send(text){
   text=(text||'').trim();if(!text||busy)return;busy=true;$('t').value='';add(text,'me');let ty=null;
   try{
     const {id}=await api('/api/send',{method:'POST',body:JSON.stringify({text})});
-    const start=Date.now();let note=false;ty=document.createElement('div');ty.className='m ai';ty.textContent='···';$('log').appendChild(ty);$('log').scrollTop=1e9;
+    const start=Date.now();let note=false;ty=document.createElement('div');ty.className='m ai typing';ty.textContent='···';$('log').appendChild(ty);$('log').scrollTop=1e9;
     while(Date.now()-start<5*60e3){
       const r=await api('/api/result?id='+encodeURIComponent(id));
       if(r.done){ty&&ty.remove();add(r.text,'ai');if(L.speak==='1')try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch{};break}
@@ -62,7 +85,7 @@ async function toggleMic(){
 }
 if(SR){SR.addListener('partialResults',d=>{if(d.matches&&d.matches[0]){heard=d.matches[0];$('t').value=heard}});
   SR.addListener('listeningState',d=>{if(d.status==='stopped'){listening=false;$('mic').classList.remove('rec');if(heard)send(heard);heard=''}})}
-$('mic').onclick=toggleMic;
+$('mic').onclick=toggleMic;document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>send(c.textContent));
 $('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';$('set').style.display='flex'};
 $('save').onclick=()=>{L.url=$('url').value.trim();L.code=$('code').value.trim();L.speak=$('speak').checked?'1':'0';$('set').style.display='none';status()};
 $('clear').onclick=()=>{$('log').innerHTML='';saveLog()};
