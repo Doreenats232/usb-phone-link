@@ -51,6 +51,9 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 <label>Pairing code (same one on the USB Desktop, 8+ characters)</label><input id="code" autocapitalize="off">
 <label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px"><input type="checkbox" id="speak"> Read answers out loud</label>
 <div class="sec"><label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:0"><input type="checkbox" id="lockOpt"> 🔒 Lock the app with my fingerprint</label><small>Optional, off by default. When on, the app asks for your fingerprint (or phone PIN) when you open it.</small></div>
+<div class="sec"><div style="display:flex;justify-content:space-between;align-items:center"><b>App updates</b><span id="verTxt" style="color:var(--sub);font-size:13px"></span></div>
+<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:10px 0 0"><input type="checkbox" id="updNote"> Tell me when a new app version is out</label>
+<div class="row"><button class="pb" id="updCheck">Check for updates</button></div><small id="updMsg">Screen changes already update by themselves. This is only for bigger app updates.</small></div>
 <div class="row"><button id="save" class="pb main">Save</button><button id="clear" class="pb">Clear chat</button></div>
 </div>
 <script>
@@ -106,7 +109,7 @@ async function toggleMic(){
 if(SR){SR.addListener('partialResults',d=>{if(d.matches&&d.matches[0]){heard=d.matches[0];$('t').value=heard}});
   SR.addListener('listeningState',d=>{if(d.status==='stopped'){listening=false;$('mic').classList.remove('rec');if(heard)send(heard);heard=''}})}
 $('mic').onclick=toggleMic;document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>send(c.textContent));
-$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';$('lockOpt').checked=L.lock==='1';$('set').style.display='flex'};
+$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';$('lockOpt').checked=L.lock==='1';$('updNote').checked=L.updnote!=='0';$('verTxt').textContent='Build '+(L.build||'?');$('set').style.display='flex'};
 $('save').onclick=()=>{L.url=$('url').value.trim();L.code=$('code').value.trim();L.speak=$('speak').checked?'1':'0';$('set').style.display='none';status()};
 $('clear').onclick=()=>{$('log').innerHTML='';saveLog()};
 if(!cfg().url)add('Welcome! Tap Settings, add your server address and a pairing code, then tap 🎤 and talk.','sys');
@@ -126,6 +129,38 @@ $('lockOpt').onchange=async()=>{
   try{const c=await BIO.checkBiometry();if(!c.isAvailable){$('lockOpt').checked=false;alert('No fingerprint is set up on this phone yet. Add one in your phone settings first.');return}
     await bioAuth('Turn on the app lock');L.lock='1';S.unlocked='1'}catch(e){$('lockOpt').checked=false}
 };
+
+// ---- in-app updater: download the new APK and open the installer (no GitHub page needed) ----
+const FS=cap&&cap.Plugins&&cap.Plugins.Filesystem, FO=cap&&cap.Plugins&&cap.Plugins.FileOpener, REPO='Doreenats232/usb-phone-link';
+const B=+'__BUILD__';if(B)L.build=B;
+async function latestRelease(){const r=await NF('https://api.github.com/repos/'+REPO+'/releases/latest');const j=await r.json();const n=+(String(j.tag_name||'').split('.').pop());
+  return {n,tag:j.tag_name,url:'https://github.com/'+REPO+'/releases/download/'+j.tag_name+'/UsbLink.apk'}}
+async function installApk(url,say){
+  if(!FS||!FO){say('This old app version cannot install by itself. Opening the download once.');setTimeout(()=>{location.href=url},800);return}
+  try{
+    say('Downloading… 0%');let h=null;
+    try{h=await FS.addListener('progress',e=>{if(e.contentLength)say('Downloading… '+Math.round(e.bytes/e.contentLength*100)+'%')})}catch(e){}
+    await FS.downloadFile({url,path:'UsbLink-update.apk',directory:'CACHE',progress:true,recursive:true});
+    try{h&&h.remove()}catch(e){}
+    const u=await FS.getUri({path:'UsbLink-update.apk',directory:'CACHE'});say('Opening the installer…');
+    await FO.open({filePath:u.uri,contentType:'application/vnd.android.package-archive',openWithDefault:true});
+    say('Tap Install on the screen that opened. If Android asks, allow USB Link to install apps, come back and tap here again.');
+  }catch(e){say('Update failed: '+(e.message||e)+' Tap here to try again.')}
+}
+function showUpdate(r){
+  let d=document.getElementById('upd');if(!d){d=document.createElement('div');d.id='upd';d.className='m sys';d.style.cssText='background:rgba(139,108,255,.25);border:1px solid var(--line);padding:12px 16px;border-radius:16px;cursor:pointer';$('log').appendChild(d)}
+  const say=t=>{d.textContent=t;$('log').scrollTop=1e9};say('⬇ New app version ready (build '+r.n+'). Tap to update.');d.onclick=()=>installApk(r.url,say);
+}
+async function checkApp(manual){
+  const m=t=>{if(manual)$('updMsg').textContent=t};
+  try{const r=await latestRelease();const mine=+L.build||0;
+    if(r.n&&mine&&r.n>mine){showUpdate(r);m('New version available (build '+r.n+'). Tap the banner in the chat.');if(manual){$('set').style.display='none'}}
+    else m(mine?'You have the newest app version.':'Latest build is '+r.n+'.')}
+  catch(e){m("Couldn't check. Are you online?")}
+}
+$('updCheck').onclick=()=>{$('updMsg').textContent='Checking…';checkApp(true)};
+$('updNote').onchange=()=>{L.updnote=$('updNote').checked?'1':'0'};
+if(L.updnote!=='0'){setTimeout(()=>checkApp(false),5000);setInterval(()=>checkApp(false),6*3600e3)}
 // ---- live updates: this app is a window onto the server, so any change there shows up here by itself ----
 function applyHot(h){L.uiTry='1';document.open();document.write(h);document.close()}
 setTimeout(()=>{L.uiTry=''},4000);

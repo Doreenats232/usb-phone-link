@@ -2,7 +2,7 @@ name: build-apk
 on:
   push:
     branches: [main]
-    paths: ['app/**', '.github/workflows/build.yml']
+    paths: ['app/package.json', 'app/capacitor.config.json', 'app/icon/**', '.github/workflows/build.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -28,6 +28,7 @@ jobs:
           grep -q RECORD_AUDIO $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.INTERNET" />\n    <queries><intent><action android:name="android.speech.RecognitionService" /></intent></queries>\n</manifest>#' $M
           grep -q "RecognitionService" $M || sed -i 's#</manifest>#    <queries><intent><action android:name="android.speech.RecognitionService" /></intent></queries>\n</manifest>#' $M
           grep -q USE_BIOMETRIC $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_BIOMETRIC" />\n</manifest>#' $M
+          grep -q REQUEST_INSTALL_PACKAGES $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>#' $M
           cat $M
       - name: Robot icon and build number
         working-directory: app
@@ -35,6 +36,8 @@ jobs:
           R=android/app/src/main/res
           rm -rf $R/mipmap-anydpi-v26
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do cp icon/mipmap-$d/*.png $R/mipmap-$d/; done
+          sed -i "s/__BUILD__/${{ github.run_number }}/" android/app/src/main/assets/public/index.html
+          grep -c "'${{ github.run_number }}'" android/app/src/main/assets/public/index.html || true
       - name: Stable signing key (so updates install over the old app)
         run: mkdir -p ~/.android && cp app/debug.keystore ~/.android/debug.keystore
       - name: Build APK
