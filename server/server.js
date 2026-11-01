@@ -10,7 +10,7 @@ function room(req, res) {
   const code = String(req.get('x-pair') || '').trim();
   if (code.length < 8) { res.status(401).json({ error: 'Pairing code must be at least 8 characters.' }); return null; }
   const id = sha(code); let r = rooms.get(id);
-  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
+  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], study: null, studyTs: 0, usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
   r.last = Date.now(); return r;
 }
 // forget idle rooms and old items
@@ -81,7 +81,13 @@ app.post('/api/answer', (req, res) => { const r = room(req, res); if (!r) return
 app.get('/api/answer', (req, res) => { const r = room(req, res); if (!r) return; const a = r.asks.get(String(req.query.id || '')); res.json({ answer: a ? a.answer : null }); });
 // USB -> publishes upcoming alarms/homework so the phone can schedule its own notifications
 app.post('/api/events', (req, res) => { const r = room(req, res); if (!r) return; r.events = (Array.isArray(req.body.events) ? req.body.events : []).slice(0, 100).map(e => ({
-  id: String(e.id || '').slice(0, 60), title: String(e.title || '').slice(0, 80), body: String(e.body || '').slice(0, 200), time: String(e.time || '').slice(0, 5), date: e.date ? String(e.date).slice(0, 10) : '', every: e.every === 'day' ? 'day' : '' })); res.json({ ok: true }); });
+  id: String(e.id || '').slice(0, 60), title: String(e.title || '').slice(0, 80), body: String(e.body || '').slice(0, 200), time: String(e.time || '').slice(0, 5), date: e.date ? String(e.date).slice(0, 10) : '', every: e.every === 'day' ? 'day' : (e.every === 'week' ? 'week' : ''), weekday: Math.min(7, Math.max(0, parseInt(e.weekday) || 0)) })); res.json({ ok: true }); });
 app.get('/api/events', (req, res) => { const r = room(req, res); if (!r) return; res.json({ events: r.events }); });
+// USB -> publishes the homework list and timetable so the phone can show them (phone edits go through commands)
+app.post('/api/study', (req, res) => { const r = room(req, res); if (!r) return; const b = req.body || {};
+  const hw = (Array.isArray(b.hw) ? b.hw : []).slice(0, 200).map(h => ({ i: parseInt(h.i) || 0, subj: String(h.subj || '').slice(0, 40), text: String(h.text || '').slice(0, 200), due: String(h.due || '').slice(0, 10), done: !!h.done }));
+  const lessons = (Array.isArray(b.lessons) ? b.lessons : []).slice(0, 200).map(l => ({ i: parseInt(l.i) || 0, day: String(l.day || '').slice(0, 3), time: String(l.time || '').slice(0, 5), subj: String(l.subj || '').slice(0, 40) }));
+  r.study = { hw, lessons, alarm: !!b.alarm, lead: Math.min(60, Math.max(1, parseInt(b.lead) || 5)) }; r.studyTs = Date.now(); res.json({ ok: true }); });
+app.get('/api/study', (req, res) => { const r = room(req, res); if (!r) return; res.json({ study: r.study, ts: r.studyTs, usbOnline: Date.now() - r.usbSeen < 20e3 }); });
 
 app.listen(process.env.PORT || 3000, () => console.log('up'));

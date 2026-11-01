@@ -1,32 +1,32 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="ui-version" content="2"><title>USB Link</title>
 <style>
-:root{--bg1:#0d0b1f;--bg2:#1a1245;--glass:rgba(255,255,255,.07);--line:rgba(255,255,255,.10);--acc:#8b6cff;--acc2:#38d6ff;--txt:#f1f0ff;--sub:#9b98c4}
+:root{--bg1:#0d0b1f;--bg2:#1a1245;--glass:rgba(255,255,255,.07);--line:rgba(255,255,255,.10);--acc:#8b6cff;--acc2:#38d6ff;--acc3:#6a4cf0;--txt:#f1f0ff;--sub:#9b98c4;--lab:var(--lab);--glowA:#3a2a9a55;--glowB:#0b8fb455;--card1:#1d1650;--card2:#120f33;--accA:#8b6cff44;--accB:#8b6cff22}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{margin:0;color:var(--txt);font:16px/1.4 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;flex-direction:column;
- background:radial-gradient(900px 500px at 85% -10%,#3a2a9a55,transparent),radial-gradient(700px 500px at -10% 110%,#0b8fb455,transparent),linear-gradient(160deg,var(--bg1),var(--bg2));
+ background:radial-gradient(900px 500px at 85% -10%,var(--glowA),transparent),radial-gradient(700px 500px at -10% 110%,var(--glowB),transparent),linear-gradient(160deg,var(--bg1),var(--bg2));
  padding-top:env(safe-area-inset-top)}
 header{display:flex;align-items:center;gap:12px;margin:10px 12px 0;padding:10px 12px;border-radius:22px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px)}
 .av{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 6px 18px #8b6cff66;position:relative}
-.dot{position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;border-radius:50%;background:#777;border:2.5px solid #1a1245}
+.dot{position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;border-radius:50%;background:#777;border:2.5px solid var(--bg2)}
 .dot.on{background:#3ddc84;box-shadow:0 0 10px #3ddc84}.dot.off{background:#ff5d6c}
 .ti{flex:1;min-width:0}.ti b{display:block;font-size:17px;letter-spacing:.2px}.ti span{font-size:12.5px;color:var(--sub)}
 button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 .ib{width:40px;height:40px;border-radius:14px;background:var(--glass);border:1px solid var(--line);font-size:18px}
 #log{flex:1;overflow:auto;padding:16px 14px 6px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
 .m{max-width:84%;padding:11px 14px;border-radius:20px;white-space:pre-wrap;word-break:break-word;animation:pop .25s ease;box-shadow:0 4px 14px #0004}
-.me{align-self:flex-end;background:linear-gradient(135deg,var(--acc),#6a4cf0);border-bottom-right-radius:6px}
+.me{color:#fff;align-self:flex-end;background:linear-gradient(135deg,var(--acc),var(--acc3));border-bottom-right-radius:6px}
 .ai{align-self:flex-start;background:var(--glass);border:1px solid var(--line);border-bottom-left-radius:6px;backdrop-filter:blur(10px)}
 .sys{align-self:center;max-width:92%;text-align:center;color:var(--sub);font-size:13px;background:transparent;box-shadow:none;padding:4px 10px}
 .typing{letter-spacing:4px;font-weight:700;animation:pulse 1s infinite}
 @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes pulse{50%{opacity:.35}}
 #chips{display:flex;gap:8px;overflow-x:auto;padding:6px 14px 2px;scrollbar-width:none}#chips::-webkit-scrollbar{display:none}
-.chip{flex:none;padding:8px 14px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:13.5px;color:#d9d4ff}
-.chip:active{background:#8b6cff44}
+.chip{flex:none;padding:8px 14px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:13.5px;color:var(--lab)}
+.chip:active{background:var(--accA)}
 #bar{display:flex;align-items:center;gap:8px;margin:8px 12px calc(10px + env(safe-area-inset-bottom));padding:7px;border-radius:30px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px)}
-#t{flex:1;min-width:0;border:0;background:transparent;color:#fff;padding:10px 8px 10px 14px;font-size:16px;outline:none}
+#t{flex:1;min-width:0;border:0;background:transparent;color:var(--txt);padding:10px 8px 10px 14px;font-size:16px;outline:none}
 #t::placeholder{color:var(--sub)}
 #mic{width:46px;height:46px;border-radius:50%;font-size:21px;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 4px 16px #38d6ff55;padding:0}
 #mic.rec{background:#ff5d6c;animation:ring 1.1s infinite}
@@ -34,33 +34,54 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 #send{width:46px;height:46px;border-radius:50%;background:var(--acc);font-size:19px;padding:0}
 #set{position:fixed;inset:0;background:linear-gradient(160deg,var(--bg1),var(--bg2));padding:22px 18px;display:none;flex-direction:column;gap:10px;padding-top:calc(22px + env(safe-area-inset-top));overflow:auto;z-index:5}
 #set h2{margin:0 0 6px}#set label{color:var(--sub);font-size:13.5px;margin-top:6px}
-#set input[type=text],#set input:not([type]){border:1px solid var(--line);border-radius:14px;background:var(--glass);color:#fff;padding:13px;font-size:16px;outline:none}
-.row{display:flex;gap:10px;margin-top:10px}.pb{flex:1;padding:13px;border-radius:14px;background:var(--glass);border:1px solid var(--line)}.pb.main{background:linear-gradient(135deg,var(--acc),#6a4cf0);border:0}
+#set input[type=text],#set input:not([type]){border:1px solid var(--line);border-radius:14px;background:var(--glass);color:var(--txt);padding:13px;font-size:16px;outline:none}
+.row{display:flex;gap:10px;margin-top:10px}.pb{flex:1;padding:13px;border-radius:14px;background:var(--glass);border:1px solid var(--line)}.pb.main{background:linear-gradient(135deg,var(--acc),var(--acc3));border:0}
 #lock{position:fixed;inset:0;z-index:9;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:30px;background:linear-gradient(160deg,var(--bg1),var(--bg2))}
 #lock .av{width:84px;height:84px;font-size:42px;border-radius:26px}#lock h2{margin:6px 0 0}#lockmsg{color:var(--sub);font-size:14px;min-height:20px}
-#pad{display:none;grid-template-columns:repeat(3,76px);gap:12px;margin-top:6px}#pad button{height:64px;border-radius:50%;background:var(--glass);border:1px solid var(--line);font-size:24px}#pad button:active{background:#8b6cff55}
+#pad{display:none;grid-template-columns:repeat(3,76px);gap:12px;margin-top:6px}#pad button{height:64px;border-radius:50%;background:var(--glass);border:1px solid var(--line);font-size:24px}#pad button:active{background:var(--accA)}
 #dots{display:none;font-size:26px;letter-spacing:6px;min-height:34px}.shake{animation:shk .35s}@keyframes shk{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
 #att{width:42px;height:42px;border-radius:50%;background:var(--glass);border:1px solid var(--line);font-size:18px;padding:0}
 #ask{position:fixed;inset:0;z-index:8;background:#000a;display:none;align-items:center;justify-content:center;padding:24px}
-#ask .card{width:100%;max-width:340px;padding:22px;border-radius:24px;background:linear-gradient(160deg,#1d1650,#120f33);border:1px solid var(--line);text-align:center}
-#ask .card b{display:block;font-size:17px;margin-bottom:8px}#ask .card p{margin:0 0 16px;color:#d9d4ff;word-break:break-word}
+#ask .card{width:100%;max-width:340px;padding:22px;border-radius:24px;background:linear-gradient(160deg,var(--card1),var(--card2));border:1px solid var(--line);text-align:center}
+#ask .card b{display:block;font-size:17px;margin-bottom:8px}#ask .card p{margin:0 0 16px;color:var(--lab);word-break:break-word}
 .filecard{align-self:flex-start;max-width:84%;padding:12px 14px;border-radius:18px;background:var(--glass);border:1px solid var(--line);cursor:pointer}
 #qa{position:fixed;inset:0;z-index:7;background:#000a;display:none;align-items:flex-end}
-#qa .sheet{width:100%;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:linear-gradient(160deg,#1d1650,#120f33);border:1px solid var(--line)}
-#qa h3{margin:0 0 12px;text-align:center;font-size:16px;color:#d9d4ff}
+#qa .sheet{width:100%;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:linear-gradient(160deg,var(--card1),var(--card2));border:1px solid var(--line)}
+#qa h3{margin:0 0 12px;text-align:center;font-size:16px;color:var(--lab)}
 #qg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .qt{padding:14px 4px;border-radius:18px;background:var(--glass);border:1px solid var(--line);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:6px}
-.qt i{font-style:normal;font-size:26px}.qt:active{background:#8b6cff44}
-.ai.stat{border-color:#38d6ff66;background:linear-gradient(135deg,#8b6cff22,#38d6ff18)}
+.qt i{font-style:normal;font-size:26px}.qt:active{background:var(--accA)}
+.ai.stat{border-color:#38d6ff66;background:linear-gradient(135deg,var(--accB),var(--accB))}
 .imgcard{padding:6px}.imgcard img{display:block;max-width:100%;border-radius:14px}
 #viewer{position:fixed;inset:0;z-index:10;background:#000;display:none;align-items:center;justify-content:center}#viewer img{max-width:100%;max-height:100%}
 #hfBtn.on{background:linear-gradient(135deg,#ff5d6c,#ff8a5c);box-shadow:0 0 14px #ff5d6c88}
 #qa .sheet{max-height:82vh;overflow:auto}
 #clipm{position:fixed;inset:0;z-index:8;background:#000a;display:none;align-items:center;justify-content:center;padding:22px}
-#clipm .card{width:100%;max-width:360px;padding:20px;border-radius:24px;background:linear-gradient(160deg,#1d1650,#120f33);border:1px solid var(--line)}
-#clipm textarea{width:100%;height:130px;border-radius:14px;border:1px solid var(--line);background:var(--glass);color:#fff;padding:12px;font:inherit;resize:none;outline:none}
-.cpy{margin-top:8px;padding:6px 12px;border-radius:12px;background:#8b6cff44;font-size:13px}
+#clipm .card{width:100%;max-width:360px;padding:20px;border-radius:24px;background:linear-gradient(160deg,var(--card1),var(--card2));border:1px solid var(--line)}
+#clipm textarea{width:100%;height:130px;border-radius:14px;border:1px solid var(--line);background:var(--glass);color:var(--txt);padding:12px;font:inherit;resize:none;outline:none}
+.cpy{margin-top:8px;padding:6px 12px;border-radius:12px;background:var(--accA);font-size:13px}
 .sec{margin-top:14px;padding:14px;border-radius:16px;background:var(--glass);border:1px solid var(--line)}.sec small{display:block;color:var(--sub);margin-top:6px;font-size:12.5px}
+
+.sh-head{display:flex;align-items:center;gap:10px;padding:12px 14px}.sh-head b{flex:1;font-size:18px}.sh-head small{color:var(--sub);font-size:12px}
+#study,#srch{position:fixed;inset:0;z-index:6;background:linear-gradient(160deg,var(--bg1),var(--bg2));display:none;flex-direction:column;padding-top:env(safe-area-inset-top)}
+#srch{z-index:6}
+.tabs{display:flex;gap:8px;padding:0 14px 8px}.tabs button{flex:1;padding:11px;border-radius:14px;background:var(--glass);border:1px solid var(--line)}.tabs button.on{background:linear-gradient(135deg,var(--acc),var(--acc3));border:0;color:#fff}
+#stBody,#srRes{flex:1;overflow:auto;padding:4px 14px calc(18px + env(safe-area-inset-bottom))}
+.empty{color:var(--sub);text-align:center;margin-top:40px}
+.card2{padding:12px;border-radius:18px;background:var(--glass);border:1px solid var(--line);margin-bottom:10px}
+.hw{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:var(--glass);border:1px solid var(--line);margin-bottom:8px}.hw>div{flex:1;min-width:0;word-break:break-word}
+.hw.done{opacity:.5}.hw.done b+span{text-decoration:line-through}
+.chk{width:30px;height:30px;border-radius:50%;border:2px solid var(--acc);background:transparent;font-size:15px;padding:0;color:var(--txt)}.hw.done .chk{background:var(--acc);color:#fff}
+.xb{width:30px;height:30px;border-radius:10px;background:transparent;color:var(--sub);font-size:18px;padding:0}
+.due{font-size:12px;color:var(--sub)}.due.late{color:#ff5d6c}.due.today{color:#ffb454}
+.frm{display:flex;flex-direction:column;gap:8px}.frm input,.frm select{border:1px solid var(--line);border-radius:12px;background:var(--glass);color:var(--txt);padding:11px;font:inherit;outline:none;min-width:0}.frm select option{color:#000}
+.frm .r2{display:flex;gap:8px}.frm .r2>*{flex:1}
+.day{margin:10px 2px 6px;color:var(--acc2);font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
+.ls{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:14px;background:var(--glass);border:1px solid var(--line);margin-bottom:6px}.ls .tm{font-weight:700;color:var(--acc2);min-width:52px}.ls span:nth-child(2){flex:1}
+.sw{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.sw button{width:44px;height:44px;border-radius:50%;border:3px solid transparent;padding:0}.sw button.on{border-color:var(--txt)}
+.hit{outline:2px solid var(--acc2);outline-offset:2px}
+#srQ{flex:1;border:1px solid var(--line);border-radius:14px;background:var(--glass);color:var(--txt);padding:11px 14px;font-size:16px;outline:none;min-width:0}
+.sr{padding:10px 12px;border-radius:14px;background:var(--glass);border:1px solid var(--line);margin-bottom:8px}.sr small{color:var(--sub)}
 </style></head><body>
 <header><div class="av">🤖<div class="dot" id="dot"></div></div><div class="ti"><b>USB Link</b><span id="st">Connecting…</span></div><button class="ib" id="hfBtn">🎧</button><button class="ib" id="qaBtn">⚡</button><button class="ib" id="bSet">⚙️</button></header>
 <div id="log"></div>
@@ -69,27 +90,32 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 <div id="lock"><div class="av">🔒</div><h2 id="lockTitle">USB Link is locked</h2><div id="lockmsg"></div><div id="dots"></div><div id="pad"></div><button id="unlock" class="pb main" style="flex:none;padding:14px 26px">Unlock with fingerprint</button><button id="lockCancel" class="pb" style="flex:none;padding:12px 26px;display:none">Cancel</button><small style="color:var(--sub);max-width:260px">Forgot the PIN? Clear the app's data in Android settings.</small></div>
 <div id="qa"><div class="sheet"><h3>⚡ Quick actions</h3><div id="qg"></div></div></div>
 <div id="clipm"><div class="card"><b style="display:block;margin-bottom:10px">📋 Send text to the PC clipboard</b><textarea id="clipTxt" placeholder="Paste or type the text here"></textarea><div class="row"><button class="pb" id="clipNo">Cancel</button><button class="pb main" id="clipYes">Send</button></div></div></div>
+<div id="study"><div class="sh-head"><button class="ib" id="stBack">‹</button><b>📚 Study</b><small id="stNote"></small></div>
+<div class="tabs"><button id="tabHw" class="on">Homework</button><button id="tabTt">Timetable</button></div><div id="stBody"></div></div>
+<div id="srch"><div class="sh-head"><button class="ib" id="srBack">‹</button><input id="srQ" placeholder="Search the chat…" autocapitalize="off"></div><div id="srRes"></div></div>
+<datalist id="subjList"></datalist>
 <div id="viewer"><img id="vimg"></div>
 <div id="ask"><div class="card"><b>🔐 The PC is asking</b><p id="askTxt"></p><div class="row" style="margin-top:0"><button class="pb" id="askNo">Deny</button><button class="pb main" id="askYes">Allow</button></div></div></div>
 <div id="set">
 <h2>Settings</h2>
 <label>Server address</label><input id="url" placeholder="https://your-link.onrender.com" autocapitalize="off">
 <label>Pairing code (same one on the USB Desktop, 8+ characters)</label><input id="code" autocapitalize="off">
-<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px"><input type="checkbox" id="speak"> Read answers out loud</label>
+<label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px"><input type="checkbox" id="speak"> Read answers out loud</label>
 <div class="sec"><b>🔒 App lock</b><small style="margin:4px 0 10px">Optional. Both are off by default.</small>
-<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:6px 0"><input type="checkbox" id="lockOpt"> Use my fingerprint</label>
-<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:6px 0"><input type="checkbox" id="pinOpt"> Use a PIN code (4 to 6 digits)</label>
+<label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:6px 0"><input type="checkbox" id="lockOpt"> Use my fingerprint</label>
+<label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:6px 0"><input type="checkbox" id="pinOpt"> Use a PIN code (4 to 6 digits)</label>
 <div class="row"><button class="pb" id="pinChange" style="display:none">Change PIN</button></div>
 <small>The PIN works on phones with no fingerprint sensor. It keeps people who pick up your phone out of the app.</small></div>
+<div class="sec"><b>🎨 Theme</b><div class="sw" id="sw"></div></div>
 <div class="sec"><b>🎧 Hands-free</b>
-<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:10px 0 6px"><input type="checkbox" id="needWake"> Only answer when I say the wake word</label>
+<label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:10px 0 6px"><input type="checkbox" id="needWake"> Only answer when I say the wake word</label>
 <input id="wakeW" placeholder="Wake word (default: morales)" autocapitalize="off">
 <small>Hands-free keeps working with the screen off or other apps open. A notification shows while it listens; tap Stop there to end it. It stops by itself after 30 quiet minutes. The wake word stops it from reacting to random talking.</small></div>
 <div class="sec"><b>🔔 Notifications</b>
-<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:10px 0 0"><input type="checkbox" id="notifOpt"> Buzz me for PC alarms, homework due, and answers</label>
+<label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:10px 0 0"><input type="checkbox" id="notifOpt"> Buzz me for PC alarms, homework due, and answers</label>
 <small>Alarms and homework from your USB Desktop are copied to this phone, so they ring here even when the app is closed.</small></div>
 <div class="sec"><div style="display:flex;justify-content:space-between;align-items:center"><b>App updates</b><span id="verTxt" style="color:var(--sub);font-size:13px"></span></div>
-<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:10px 0 0"><input type="checkbox" id="updNote"> Tell me when a new app version is out</label>
+<label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:10px 0 0"><input type="checkbox" id="updNote"> Tell me when a new app version is out</label>
 <div class="row"><button class="pb" id="updCheck">Check for updates</button></div><small id="updMsg">Screen changes already update by themselves. This is only for bigger app updates.</small></div>
 <div class="row"><button id="save" class="pb main">Save</button><button id="clear" class="pb">Clear chat</button></div>
 </div>
@@ -102,7 +128,7 @@ let busy=false, listening=false, heard='';
 const NF=(()=>{try{const f=document.createElement('iframe');f.style.cssText='display:none';document.body.appendChild(f);return f.contentWindow.fetch.bind(f.contentWindow)}catch(e){return fetch.bind(window)}})();
 const cfg=()=>({url:(L.url||DEF).trim().replace(/\/$/,''),code:(L.code||'').trim()});
 function add(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('log').appendChild(d);$('log').scrollTop=1e9;saveLog()}
-function saveLog(){L.log=JSON.stringify([...$('log').children].filter(e=>e.textContent!=='···').slice(-60).map(e=>[e.className.replace('m ','').replace(' typing',''),e.textContent]))}
+function saveLog(){L.log=JSON.stringify([...$('log').children].filter(e=>e.textContent!=='···').slice(-300).map(e=>[e.className.replace('m ','').replace(' typing',''),e.textContent]))}
 try{JSON.parse(L.log||'[]').forEach(([c,t])=>{const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('log').appendChild(d)})}catch{}
 async function api(path,opt={}){const {url,code}=cfg();if(!url||code.length<8){const e=new Error('Open Settings: add the server address and an 8+ character pairing code.');e.fatal=1;throw e}
   const r=await NF(url+path,{...opt,headers:{'x-pair':code,'content-type':'application/json'}});const j=await r.json();if(!r.ok)throw new Error(j.error||('Error '+r.status));return j}
@@ -174,14 +200,108 @@ const QA=[['🔒','Lock','/lock','Lock the PC'],['😴','Sleep','/sleep','Put th
  ['⏮','Previous','/media prev','Previous track'],['⏯','Play / Pause','/media play','Play / pause'],['⏭','Next','/media next','Next track'],
  ['📋','Send to PC clip','@clipset','Send text to the PC clipboard'],['📥','PC clipboard','/clipget','Get the PC clipboard'],['📊','Status','/status','PC status'],['🖥️','Screen','/screen','Show my PC screen'],['↩️','Undo','/undo','Undo the last change'],
  ['🗂️','Files','/open files','Open Files'],['📝','Notepad','/open notepad','Open Notepad'],['🌐','Browser','/open web','Open the Browser'],
- ['🧹','Tidy icons','/tidy','Tidy the icons'],['🔤','Sort A–Z','/sort az','Sort icons A to Z'],['🤖','Assistant','/open ai','Open the Assistant']];
+ ['🧹','Tidy icons','/tidy','Tidy the icons'],['🔤','Sort A–Z','/sort az','Sort icons A to Z'],['🤖','Assistant','/open ai','Open the Assistant'],['📚','Study','@study','Study'],['🔍','Search chat','@search','Search the chat']];
 QA.forEach(q=>{const b=document.createElement('button');b.className='qt';b.innerHTML='<i>'+q[0]+'</i>'+q[1];
-  b.onclick=()=>{if(q[4]&&!confirm(q[4]))return;$('qa').style.display='none';if(q[2]==='@clipset'){$('clipTxt').value='';$('clipm').style.display='flex';try{navigator.clipboard.readText().then(t=>{if(t)$('clipTxt').value=t}).catch(()=>{})}catch(e){}return}send(q[2],null,q[0]+' '+q[3])};$('qg').appendChild(b)});
+  b.onclick=()=>{if(q[4]&&!confirm(q[4]))return;$('qa').style.display='none';if(q[2]==='@study'){openStudy();return}if(q[2]==='@search'){openSearch();return}if(q[2]==='@clipset'){$('clipTxt').value='';$('clipm').style.display='flex';try{navigator.clipboard.readText().then(t=>{if(t)$('clipTxt').value=t}).catch(()=>{})}catch(e){}return}send(q[2],null,q[0]+' '+q[3])};$('qg').appendChild(b)});
 $('qaBtn').onclick=()=>{$('qa').style.display='flex'};
 $('qa').onclick=e=>{if(e.target===$('qa'))$('qa').style.display='none'};
 $('clipNo').onclick=()=>{$('clipm').style.display='none'};
 $('clipYes').onclick=()=>{const t=$('clipTxt').value;$('clipm').style.display='none';if(t.trim())send('/clipset '+t,null,'📋 Sent '+t.length+' characters to the PC clipboard')};
 $('viewer').onclick=()=>{$('viewer').style.display='none'};
+
+// ---- themes ----
+const THEMES={
+ violet:{n:'Violet',bg1:'#0d0b1f',bg2:'#1a1245',acc:'#8b6cff',acc2:'#38d6ff',acc3:'#6a4cf0',glowA:'#3a2a9a55',glowB:'#0b8fb455',card1:'#1d1650',card2:'#120f33',txt:'#f1f0ff',sub:'#9b98c4',lab:'var(--lab)',glass:'rgba(255,255,255,.07)',line:'rgba(255,255,255,.10)'},
+ ocean:{n:'Ocean',bg1:'#06121f',bg2:'#0b2a4a',acc:'#2fa8ff',acc2:'#3ef0d0',acc3:'#1b78c8',glowA:'#0a4f9a55',glowB:'#0bb0a055',card1:'#0e2f52',card2:'#08192f',txt:'#eaf6ff',sub:'#8fb0cc',lab:'#cfe6fa',glass:'rgba(255,255,255,.07)',line:'rgba(255,255,255,.10)'},
+ sunset:{n:'Sunset',bg1:'#1f0b12',bg2:'#4a1a2c',acc:'#ff7a59',acc2:'#ffc15a',acc3:'#d9483a',glowA:'#9a2a3a55',glowB:'#b8751055',card1:'#4f1d2f',card2:'#2b0f19',txt:'#fff1ec',sub:'#cfa09a',lab:'#ffd9cf',glass:'rgba(255,255,255,.07)',line:'rgba(255,255,255,.10)'},
+ forest:{n:'Forest',bg1:'#07150e',bg2:'#123a24',acc:'#3ddc84',acc2:'#b7f35a',acc3:'#27a862',glowA:'#1a7a4455',glowB:'#6a9a1055',card1:'#154a2c',card2:'#0a2416',txt:'#ecfff3',sub:'#94bfa4',lab:'#d3f5e0',glass:'rgba(255,255,255,.07)',line:'rgba(255,255,255,.10)'},
+ rose:{n:'Rose',bg1:'#1d0b1a',bg2:'#45123d',acc:'#ff5fb1',acc2:'#ffa3d7',acc3:'#d63a8f',glowA:'#9a2a7a55',glowB:'#b8408a55',card1:'#4d1646',card2:'#2a0c26',txt:'#fff0f9',sub:'#cfa0c0',lab:'#ffd6ee',glass:'rgba(255,255,255,.07)',line:'rgba(255,255,255,.10)'},
+ black:{n:'Black',bg1:'#000000',bg2:'#0a0a0f',acc:'#9d86ff',acc2:'#58e1ff',acc3:'#7458e8',glowA:'#00000000',glowB:'#00000000',card1:'#14141c',card2:'#08080c',txt:'#f4f4ff',sub:'#8d8da8',lab:'#d6d6f2',glass:'rgba(255,255,255,.06)',line:'rgba(255,255,255,.09)'},
+ light:{n:'Light',bg1:'#f5f3ff',bg2:'#e4defc',acc:'#6a4cf0',acc2:'#1a9ad8',acc3:'#5238cf',glowA:'#b9a8ff55',glowB:'#9ad7ff55',card1:'#ffffff',card2:'#ece8ff',txt:'#1c1740',sub:'#6a64a0',lab:'#3a3370',glass:'rgba(0,0,0,.05)',line:'rgba(0,0,0,.12)'}};
+function applyTheme(n){const t=THEMES[n]||THEMES.violet,r=document.documentElement.style;for(const k in t)if(k!=='n')r.setProperty('--'+k,t[k]);r.setProperty('--accA',t.acc+'44');r.setProperty('--accB',t.acc+'22')}
+applyTheme(L.theme);
+function drawSw(){$('sw').innerHTML='';for(const k in THEMES){const t=THEMES[k],b=document.createElement('button');b.title=t.n;b.style.background='linear-gradient(135deg,'+t.acc+','+t.acc2+')';if((L.theme||'violet')===k)b.className='on';b.onclick=()=>{L.theme=k;applyTheme(k);drawSw()};$('sw').appendChild(b)}}
+drawSw();
+
+// ---- chat search ----
+function openSearch(){$('srch').style.display='flex';$('srQ').value='';$('srRes').innerHTML='<p class="empty">Type at least 2 letters.</p>';setTimeout(()=>$('srQ').focus(),100)}
+$('srBack').onclick=()=>{$('srch').style.display='none'};
+$('srQ').oninput=()=>{
+  const q=$('srQ').value.trim().toLowerCase(),box=$('srRes');box.innerHTML='';
+  if(q.length<2){box.innerHTML='<p class="empty">Type at least 2 letters.</p>';return}
+  const hits=[...$('log').children].filter(e=>e.textContent.toLowerCase().includes(q)&&e.textContent!=='···').slice(-60).reverse();
+  if(!hits.length){box.innerHTML='<p class="empty">Nothing found.</p>';return}
+  for(const e of hits){const t=e.textContent,k=t.toLowerCase().indexOf(q),snip=(k>40?'…':'')+t.slice(Math.max(0,k-40),k+80)+(t.length>k+80?'…':'');
+    const who=e.classList.contains('me')?'You':e.classList.contains('ai')?'AI':'Note';
+    const d=document.createElement('div');d.className='sr';d.innerHTML='<small></small><div></div>';d.firstChild.textContent=who;d.lastChild.textContent=snip;
+    d.onclick=()=>{$('srch').style.display='none';e.scrollIntoView({block:'center'});e.classList.add('hit');setTimeout(()=>e.classList.remove('hit'),2000)};box.appendChild(d)}
+};
+
+// ---- study tab: homework + timetable (data lives on the PC; edits run as commands there) ----
+const DAYS=[['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday'],['sun','Sunday']];
+const SUBJ=['Maths','English','Physics','Chemistry','Biology','ICT','History','Geography','Literature','Kiswahili','Luganda','Religious Education','Entrepreneurship'];
+let st=null,stTab='hw',stBusy=false;try{st=JSON.parse(L.study||'null')}catch(e){}
+const sleep2=ms=>new Promise(r=>setTimeout(r,ms));
+async function quiet(text){
+  const {id}=await api('/api/send',{method:'POST',body:JSON.stringify({text})});
+  const end=Date.now()+60e3;let seen='';
+  while(Date.now()<end){const r=await api('/api/result?id='+encodeURIComponent(id)+'&seen='+encodeURIComponent(seen));
+    if(r.done)return r.text||'';if(!r.usbOnline)throw new Error('USB Desktop is not connected.');seen=(r.asks||[]).map(a=>a.id).sort().join(',')}
+  throw new Error('The PC took too long.');
+}
+async function stLoad(){
+  try{const j=await api('/api/study');if(j.study){st=j.study;L.study=JSON.stringify(st)}$('stNote').textContent=j.usbOnline?'USB online':'USB offline · last saved';stRender()}
+  catch(e){$('stNote').textContent=e.message;stRender()}
+}
+async function stDo(cmd){
+  if(stBusy)return;stBusy=true;$('stNote').textContent='Saving…';
+  try{const m=await quiet(cmd);await sleep2(500);await stLoad();$('stNote').textContent=m.slice(0,40)}catch(e){$('stNote').textContent='⚠ '+e.message}
+  stBusy=false;
+}
+const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+function subjOptions(){const set=new Set(SUBJ);(st&&st.hw||[]).forEach(h=>h.subj&&set.add(h.subj));(st&&st.lessons||[]).forEach(l=>l.subj&&set.add(l.subj));$('subjList').innerHTML=[...set].map(x=>'<option value="'+x.replace(/"/g,'')+'">').join('')}
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function stRender(){
+  $('tabHw').classList.toggle('on',stTab==='hw');$('tabTt').classList.toggle('on',stTab==='tt');subjOptions();
+  const b=$('stBody');b.innerHTML='';
+  if(!st){b.appendChild(el('p','empty','Nothing here yet. Open USB Desktop on the PC with the phone link on, then come back.'));return}
+  stTab==='hw'?renderHw(b):renderTt(b);
+}
+function renderHw(b){
+  const today=todayStr(),open=st.hw.filter(h=>!h.done).sort((a,c)=>(a.due||'9999').localeCompare(c.due||'9999')),done=st.hw.filter(h=>h.done);
+  if(!open.length&&!done.length)b.appendChild(el('p','empty','No homework. 🎉'));
+  for(const h of open.concat(done)){
+    const row=el('div','hw'+(h.done?' done':'')),chk=el('button','chk',h.done?'✓':'');chk.onclick=()=>stDo('/hw toggle '+h.i);
+    const mid=el('div');const sb=el('b',null,h.subj+' ');mid.appendChild(sb);mid.appendChild(el('span',null,h.text));
+    if(h.due){const late=!h.done&&h.due<today,tdy=!h.done&&h.due===today;mid.appendChild(el('br'));mid.appendChild(el('span','due'+(late?' late':tdy?' today':''),'due '+h.due+(late?' · overdue':tdy?' · today':'')))}
+    const x=el('button','xb','×');x.onclick=()=>{if(confirm('Remove this homework?'))stDo('/hw del '+h.i)};
+    row.appendChild(chk);row.appendChild(mid);row.appendChild(x);b.appendChild(row);
+  }
+  if(done.length){const c=el('button','pb','Clear finished');c.style.cssText='width:100%;margin:4px 0 10px;flex:none';c.onclick=()=>stDo('/hw clear');b.appendChild(c)}
+  const f=el('div','card2 frm');f.appendChild(el('b',null,'➕ Add homework'));
+  const sj=el('input');sj.setAttribute('list','subjList');sj.placeholder='Subject';const tk=el('input');tk.placeholder='What to do';const dd=el('input');dd.type='date';
+  const add=el('button','pb main','Add');add.style.flex='none';add.onclick=()=>{if(!sj.value.trim()||!tk.value.trim()){$('stNote').textContent='Add a subject and a task';return}stDo('/hw add '+sj.value.trim().replace(/\|/g,'/')+'|'+tk.value.trim().replace(/\|/g,'/')+'|'+dd.value)};
+  f.appendChild(sj);f.appendChild(tk);f.appendChild(dd);f.appendChild(add);b.appendChild(f);
+}
+function renderTt(b){
+  const by={};st.lessons.forEach(l=>(by[l.day]=by[l.day]||[]).push(l));
+  if(!st.lessons.length)b.appendChild(el('p','empty','No lessons yet. Add one below.'));
+  for(const [k,name] of DAYS){const ls=(by[k]||[]).sort((a,c)=>a.time.localeCompare(c.time));if(!ls.length)continue;b.appendChild(el('div','day',name));
+    for(const l of ls){const r=el('div','ls');r.appendChild(el('span','tm',l.time));r.appendChild(el('span',null,l.subj));const x=el('button','xb','×');x.onclick=()=>{if(confirm('Remove '+l.subj+'?'))stDo('/lesson del '+l.i)};r.appendChild(x);b.appendChild(r)}}
+  const f=el('div','card2 frm');f.appendChild(el('b',null,'➕ Add a lesson'));
+  const dsel=el('select');const td=['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];DAYS.forEach(([k,n])=>{const o=el('option',null,n);o.value=k;if(k===td)o.selected=true;dsel.appendChild(o)});
+  const r2=el('div','r2');const tm=el('input');tm.type='time';tm.value='08:00';const sj=el('input');sj.setAttribute('list','subjList');sj.placeholder='Subject';r2.appendChild(tm);r2.appendChild(sj);
+  const add=el('button','pb main','Add lesson');add.style.flex='none';add.onclick=()=>{if(!sj.value.trim()||!tm.value){$('stNote').textContent='Pick a time and a subject';return}stDo('/lesson add '+dsel.value+'|'+tm.value+'|'+sj.value.trim().replace(/\|/g,'/'))};
+  f.appendChild(dsel);f.appendChild(r2);f.appendChild(add);b.appendChild(f);
+  const a=el('div','card2 frm');a.appendChild(el('b',null,'⏰ Lesson alarms'));
+  const lab=el('label');lab.style.cssText='display:flex;gap:10px;align-items:center';const cb=el('input');cb.type='checkbox';cb.checked=!!st.alarm;lab.appendChild(cb);lab.appendChild(document.createTextNode(' Ring before each lesson (PC + phone)'));
+  const lead=el('select');[5,10,15,20,30].forEach(m=>{const o=el('option',null,m+' minutes before');o.value=m;if(m===st.lead)o.selected=true;lead.appendChild(o)});
+  const sv=()=>stDo('/lesson alarm '+(cb.checked?'on':'off')+' '+lead.value);cb.onchange=sv;lead.onchange=sv;
+  a.appendChild(lab);a.appendChild(lead);a.appendChild(el('small','due','Phone alerts also need 🔔 Notifications turned on in Settings.'));b.appendChild(a);
+}
+function openStudy(){$('study').style.display='flex';stRender();stLoad()}
+$('stBack').onclick=()=>{$('study').style.display='none'};
+$('tabHw').onclick=()=>{stTab='hw';stRender()};$('tabTt').onclick=()=>{stTab='tt';stRender()};
 // ---- notifications: copy the PC's alarms and homework onto this phone as its own scheduled notifications ----
 async function syncEvents(){
   if(L.notif!=='1'||!LN)return;
@@ -190,7 +310,8 @@ async function syncEvents(){
     try{const p=await LN.getPending();const old=(p.notifications||[]).filter(n=>n.extra&&n.extra.src==='usb');if(old.length)await LN.cancel({notifications:old.map(n=>({id:n.id}))})}catch(e){}
     const list=[],now=Date.now();
     for(const e of j.events||[]){const [hh,mm]=String(e.time).split(':').map(Number);if(isNaN(hh)||isNaN(mm))continue;
-      if(e.every==='day')list.push({id:nid(e.id),title:e.title,body:e.body,schedule:{on:{hour:hh,minute:mm},allowWhileIdle:true},extra:{src:'usb'}});
+      if(e.every==='week'&&e.weekday)list.push({id:nid(e.id),title:e.title,body:e.body,schedule:{on:{weekday:e.weekday,hour:hh,minute:mm},allowWhileIdle:true},extra:{src:'usb'}});
+      else if(e.every==='day')list.push({id:nid(e.id),title:e.title,body:e.body,schedule:{on:{hour:hh,minute:mm},allowWhileIdle:true},extra:{src:'usb'}});
       else if(e.date){const at=new Date(e.date+'T'+e.time+':00');if(at.getTime()>now)list.push({id:nid(e.id),title:e.title,body:e.body,schedule:{at,allowWhileIdle:true},extra:{src:'usb'}})}}
     if(list.length)await LN.schedule({notifications:list});L.evsig=sig;
   }catch(e){}
