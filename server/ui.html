@@ -68,22 +68,23 @@ $('save').onclick=()=>{L.url=$('url').value.trim();L.code=$('code').value.trim()
 $('clear').onclick=()=>{$('log').innerHTML='';saveLog()};
 if(!cfg().url)add('Welcome! Tap Settings, add your server address and a pairing code, then tap 🎤 and talk.','sys');
 status();setInterval(status,20000);
-// ---- updates: UI hot-updates from the server (no new APK), native updates via the release page ----
-const B=+'__BUILD__';if(B)L.build=B;
+// ---- live updates: this app is a window onto the server, so any change there shows up here by itself ----
 function applyHot(h){L.uiTry='1';document.open();document.write(h);document.close()}
 setTimeout(()=>{L.uiTry=''},4000);
-async function checkUpdates(){
-  try{const u=cfg().url;const r=await fetch(u+'/ui.html',{cache:'no-store'});if(r.ok){const h=await r.text();const m=h.match(/ui-version" content="(\d+)"/);
-    if(m&&+m[1]>Math.max(UIV,+L.uiVer||0)&&h.includes('</html>')){L.uiHtml=h;L.uiVer=m[1];if(!window.__hot){window.__hot=1;applyHot(h);return}}}}catch{}
-  try{const r=await fetch('https://api.github.com/repos/Doreenats232/usb-phone-link/releases/latest');const j=await r.json();const n=+(String(j.tag_name||'').split('.').pop());
-    if(n&&L.build&&n>+L.build&&!$('upd')){const d=document.createElement('div');d.id='upd';d.className='m sys';d.style.cssText='background:#2a2a40;padding:10px 14px;border-radius:12px';d.innerHTML='New app version available. <u style="color:#9d86ff">Tap to download</u>';
-      d.onclick=()=>{location.href='https://github.com/Doreenats232/usb-phone-link/releases/download/'+j.tag_name+'/UsbLink.apk'};$('log').appendChild(d)}}catch{}
+async function liveUpdate(){
+  try{
+    if(busy||listening)return;
+    const r=await fetch(cfg().url+'/ui.html?'+Date.now(),{cache:'no-store'});if(!r.ok)return;
+    const h=await r.text();if(!h.includes('</html>')||h===L.uiHtml||window.__hot===h)return;
+    L.uiHtml=h;window.__hot=h;applyHot(h);
+  }catch{}
 }
-setTimeout(checkUpdates,1500);
+setTimeout(liveUpdate,800);setInterval(liveUpdate,45000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)liveUpdate()});
 
 </script><script>
-window.addEventListener('load',()=>{try{const L=localStorage,UIV=2;
-  if(L.uiTry==='1'){L.uiHtml='';L.uiVer='';L.uiTry=''}   // last hot UI never started: drop it
-  if(L.uiHtml&&(+L.uiVer||0)>UIV&&!window.__hot){window.__hot=1;L.uiTry='1';document.open();document.write(L.uiHtml);document.close()}}catch{}});
+window.addEventListener('load',()=>{try{const L=localStorage;
+  if(L.uiTry==='1'){L.uiHtml='';L.uiTry=''}   // last live screen never started: drop it, use the built-in one
+  if(L.uiHtml&&!window.__hot){window.__hot=L.uiHtml;L.uiTry='1';document.open();document.write(L.uiHtml);document.close()}}catch{}});
 </script>
 </body></html>
