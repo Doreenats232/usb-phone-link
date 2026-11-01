@@ -50,7 +50,7 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 <label>Server address</label><input id="url" placeholder="https://your-link.onrender.com" autocapitalize="off">
 <label>Pairing code (same one on the USB Desktop, 8+ characters)</label><input id="code" autocapitalize="off">
 <label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px"><input type="checkbox" id="speak"> Read answers out loud</label>
-<div class="sec"><label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:0"><input type="checkbox" id="lockOpt"> 🔒 Lock the app with my fingerprint</label><small>Optional, off by default. When on, the app asks for your fingerprint (or phone PIN) when you open it.</small></div>
+<div class="sec"><label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:0"><input type="checkbox" id="lockOpt"> 🔒 Lock the app (fingerprint, or my phone PIN/pattern)</label><small>Optional, off by default. When on, the app asks for your fingerprint, or the PIN/pattern you use to unlock your phone, when you open it.</small></div>
 <div class="sec"><div style="display:flex;justify-content:space-between;align-items:center"><b>App updates</b><span id="verTxt" style="color:var(--sub);font-size:13px"></span></div>
 <label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:10px 0 0"><input type="checkbox" id="updNote"> Tell me when a new app version is out</label>
 <div class="row"><button class="pb" id="updCheck">Check for updates</button></div><small id="updMsg">Screen changes already update by themselves. This is only for bigger app updates.</small></div>
@@ -126,7 +126,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){S.hid=Date
 $('lockOpt').onchange=async()=>{
   if(!$('lockOpt').checked){L.lock='0';return}
   if(!BIO){$('lockOpt').checked=false;alert('The fingerprint lock needs the newest USB Link app. Install the latest version once, then turn it on.');return}
-  try{const c=await BIO.checkBiometry();if(!c.isAvailable){$('lockOpt').checked=false;alert('No fingerprint is set up on this phone yet. Add one in your phone settings first.');return}
+  try{const c=await BIO.checkBiometry();if(!c.isAvailable&&!c.deviceIsSecure){$('lockOpt').checked=false;alert('This phone has no screen lock yet. Set a PIN, pattern or password in your phone settings first, then turn this on.');return}
     await bioAuth('Turn on the app lock');L.lock='1';S.unlocked='1'}catch(e){$('lockOpt').checked=false}
 };
 
