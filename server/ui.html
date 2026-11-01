@@ -45,13 +45,24 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 #ask .card{width:100%;max-width:340px;padding:22px;border-radius:24px;background:linear-gradient(160deg,#1d1650,#120f33);border:1px solid var(--line);text-align:center}
 #ask .card b{display:block;font-size:17px;margin-bottom:8px}#ask .card p{margin:0 0 16px;color:#d9d4ff;word-break:break-word}
 .filecard{align-self:flex-start;max-width:84%;padding:12px 14px;border-radius:18px;background:var(--glass);border:1px solid var(--line);cursor:pointer}
+#qa{position:fixed;inset:0;z-index:7;background:#000a;display:none;align-items:flex-end}
+#qa .sheet{width:100%;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:linear-gradient(160deg,#1d1650,#120f33);border:1px solid var(--line)}
+#qa h3{margin:0 0 12px;text-align:center;font-size:16px;color:#d9d4ff}
+#qg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.qt{padding:14px 4px;border-radius:18px;background:var(--glass);border:1px solid var(--line);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.qt i{font-style:normal;font-size:26px}.qt:active{background:#8b6cff44}
+.ai.stat{border-color:#38d6ff66;background:linear-gradient(135deg,#8b6cff22,#38d6ff18)}
+.imgcard{padding:6px}.imgcard img{display:block;max-width:100%;border-radius:14px}
+#viewer{position:fixed;inset:0;z-index:10;background:#000;display:none;align-items:center;justify-content:center}#viewer img{max-width:100%;max-height:100%}
 .sec{margin-top:14px;padding:14px;border-radius:16px;background:var(--glass);border:1px solid var(--line)}.sec small{display:block;color:var(--sub);margin-top:6px;font-size:12.5px}
 </style></head><body>
-<header><div class="av">🤖<div class="dot" id="dot"></div></div><div class="ti"><b>USB Link</b><span id="st">Connecting…</span></div><button class="ib" id="bSet">⚙️</button></header>
+<header><div class="av">🤖<div class="dot" id="dot"></div></div><div class="ti"><b>USB Link</b><span id="st">Connecting…</span></div><button class="ib" id="qaBtn">⚡</button><button class="ib" id="bSet">⚙️</button></header>
 <div id="log"></div>
 <div id="chips"><button class="chip">Open notepad</button><button class="chip">What time is it?</button><button class="chip">Show my homework</button><button class="chip">Sort my icons A to Z</button><button class="chip">Lock the PC</button></div>
 <div id="bar"><button id="mic">🎤</button><button id="att">📎</button><input type="file" id="fi" style="display:none"><input id="t" placeholder="Message your USB…"><button id="send">➤</button></div>
 <div id="lock"><div class="av">🔒</div><h2 id="lockTitle">USB Link is locked</h2><div id="lockmsg"></div><div id="dots"></div><div id="pad"></div><button id="unlock" class="pb main" style="flex:none;padding:14px 26px">Unlock with fingerprint</button><button id="lockCancel" class="pb" style="flex:none;padding:12px 26px;display:none">Cancel</button><small style="color:var(--sub);max-width:260px">Forgot the PIN? Clear the app's data in Android settings.</small></div>
+<div id="qa"><div class="sheet"><h3>⚡ Quick actions</h3><div id="qg"></div></div></div>
+<div id="viewer"><img id="vimg"></div>
 <div id="ask"><div class="card"><b>🔐 The PC is asking</b><p id="askTxt"></p><div class="row" style="margin-top:0"><button class="pb" id="askNo">Deny</button><button class="pb main" id="askYes">Allow</button></div></div></div>
 <div id="set">
 <h2>Settings</h2>
@@ -91,7 +102,9 @@ const mimeOf=n=>MIME[(n.split('.').pop()||'').toLowerCase()]||'application/octet
 const nid=t=>{let h=7;for(const c of String(t))h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)%2147483000+1};
 async function notify(title,body){if(L.notif!=='1'||!LN||!document.hidden)return;try{await LN.schedule({notifications:[{id:nid(title+body+Date.now()),title,body:String(body).slice(0,200),schedule:{at:new Date(Date.now()+600)}}]})}catch(e){}}
 // file card for a file the PC sent back
+function addAi(t){add(t,String(t).startsWith('📊')?'ai stat':'ai')}
 function fileCard(f){
+  if(mimeOf(f.name).startsWith('image/')){const d=document.createElement('div');d.className='filecard imgcard';const im=document.createElement('img');im.src='data:'+mimeOf(f.name)+';base64,'+f.data;d.appendChild(im);d.onclick=()=>{$('vimg').src=im.src;$('viewer').style.display='flex'};$('log').appendChild(d);$('log').scrollTop=1e9;return}
   const d=document.createElement('div');d.className='filecard';d.innerHTML='📄 <b></b><br><small style="color:var(--sub)">Tap to open or save</small>';d.querySelector('b').textContent=f.name;
   d.onclick=async()=>{try{
     if(FS2&&FO2){await FS2.writeFile({path:f.name,data:f.data,directory:'CACHE',recursive:true});const u=await FS2.getUri({path:f.name,directory:'CACHE'});await FO2.open({filePath:u.uri,contentType:mimeOf(f.name),openWithDefault:false})}
@@ -116,7 +129,7 @@ async function waitReply(id,ty){
     try{
       const r=await api('/api/result?id='+encodeURIComponent(id)+'&seen='+encodeURIComponent(curAsk||''));fails=0;
       handleAsks(r.asks);
-      if(r.done){ty&&ty.remove();L.pend='';hideAsk();add(r.text||'Done.','ai');if(r.file)fileCard(r.file);notify('Morales',r.text||'Done.');if(L.speak==='1')try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch(e){};return true}
+      if(r.done){ty&&ty.remove();L.pend='';hideAsk();addAi(r.text||'Done.');if(r.file)fileCard(r.file);notify('Morales',r.text||'Done.');if(L.speak==='1')try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch(e){};return true}
       if(!r.usbOnline&&!note){note=true;add('USB Desktop is not connected. Open it on the PC (Assistant → Phone → Phone link on).','sys')}
     }catch(e){
       if(e.fatal||++fails>30){ty&&ty.remove();add('⚠ '+e.message,'sys');return false}
@@ -126,9 +139,9 @@ async function waitReply(id,ty){
   ty&&ty.remove();add('No answer yet. If the PC is busy, it will appear when you reopen the app.','sys');return false;
 }
 function typing(){const t=document.createElement('div');t.className='m ai typing';t.textContent='···';$('log').appendChild(t);$('log').scrollTop=1e9;return t}
-async function send(text,file){
+async function send(text,file,label){
   text=(text||'').trim();if((!text&&!file)||busy)return;busy=true;$('t').value='';
-  add(file?('📎 '+file.name+(text?' · '+text:'')):text,'me');let ty=null;
+  add(label||(file?('📎 '+file.name+(text?' · '+text:'')):text),'me');let ty=null;
   try{
     const {id}=await api('/api/send',{method:'POST',body:JSON.stringify({text,file})});
     L.pend=id;ty=typing();await waitReply(id,ty);
@@ -142,6 +155,18 @@ $('fi').onchange=()=>{
   if(f.size>8*1024*1024){add('That file is over 8 MB. Pick a smaller one.','sys');return}
   const rd=new FileReader();rd.onload=()=>{const b64=String(rd.result).split(',')[1]||'';send($('t').value,{name:f.name,data:b64})};rd.onerror=()=>add('⚠ Couldn’t read that file.','sys');rd.readAsDataURL(f);
 };
+
+// ---- quick actions grid (runs on the PC directly, no AI needed) ----
+const QA=[['🔒','Lock','/lock','Lock the PC'],['😴','Sleep','/sleep','Put the PC to sleep','Put the PC to sleep? The phone link will disconnect.'],['⏏️','Eject USB','/eject','Eject the USB','Eject the USB now? USB Desktop will close.'],
+ ['🔊','Volume +','/vol up','Volume up'],['🔉','Volume −','/vol down','Volume down'],['🔇','Mute','/vol mute','Mute the PC'],
+ ['📊','Status','/status','PC status'],['🖥️','Screen','/screen','Show my PC screen'],['↩️','Undo','/undo','Undo the last change'],
+ ['🗂️','Files','/open files','Open Files'],['📝','Notepad','/open notepad','Open Notepad'],['🌐','Browser','/open web','Open the Browser'],
+ ['🧹','Tidy icons','/tidy','Tidy the icons'],['🔤','Sort A–Z','/sort az','Sort icons A to Z'],['🤖','Assistant','/open ai','Open the Assistant']];
+QA.forEach(q=>{const b=document.createElement('button');b.className='qt';b.innerHTML='<i>'+q[0]+'</i>'+q[1];
+  b.onclick=()=>{if(q[4]&&!confirm(q[4]))return;$('qa').style.display='none';send(q[2],null,q[0]+' '+q[3])};$('qg').appendChild(b)});
+$('qaBtn').onclick=()=>{$('qa').style.display='flex'};
+$('qa').onclick=e=>{if(e.target===$('qa'))$('qa').style.display='none'};
+$('viewer').onclick=()=>{$('viewer').style.display='none'};
 // ---- notifications: copy the PC's alarms and homework onto this phone as its own scheduled notifications ----
 async function syncEvents(){
   if(L.notif!=='1'||!LN)return;
