@@ -38,19 +38,25 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 .row{display:flex;gap:10px;margin-top:10px}.pb{flex:1;padding:13px;border-radius:14px;background:var(--glass);border:1px solid var(--line)}.pb.main{background:linear-gradient(135deg,var(--acc),#6a4cf0);border:0}
 #lock{position:fixed;inset:0;z-index:9;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:30px;background:linear-gradient(160deg,var(--bg1),var(--bg2))}
 #lock .av{width:84px;height:84px;font-size:42px;border-radius:26px}#lock h2{margin:6px 0 0}#lockmsg{color:var(--sub);font-size:14px;min-height:20px}
+#pad{display:none;grid-template-columns:repeat(3,76px);gap:12px;margin-top:6px}#pad button{height:64px;border-radius:50%;background:var(--glass);border:1px solid var(--line);font-size:24px}#pad button:active{background:#8b6cff55}
+#dots{display:none;font-size:26px;letter-spacing:6px;min-height:34px}.shake{animation:shk .35s}@keyframes shk{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
 .sec{margin-top:14px;padding:14px;border-radius:16px;background:var(--glass);border:1px solid var(--line)}.sec small{display:block;color:var(--sub);margin-top:6px;font-size:12.5px}
 </style></head><body>
 <header><div class="av">🤖<div class="dot" id="dot"></div></div><div class="ti"><b>USB Link</b><span id="st">Connecting…</span></div><button class="ib" id="bSet">⚙️</button></header>
 <div id="log"></div>
 <div id="chips"><button class="chip">Open notepad</button><button class="chip">What time is it?</button><button class="chip">Show my homework</button><button class="chip">Sort my icons A to Z</button><button class="chip">Lock the PC</button></div>
 <div id="bar"><button id="mic">🎤</button><input id="t" placeholder="Message your USB…"><button id="send">➤</button></div>
-<div id="lock"><div class="av">🔒</div><h2>USB Link is locked</h2><div id="lockmsg"></div><button id="unlock" class="pb main" style="flex:none;padding:14px 26px">Unlock</button></div>
+<div id="lock"><div class="av">🔒</div><h2 id="lockTitle">USB Link is locked</h2><div id="lockmsg"></div><div id="dots"></div><div id="pad"></div><button id="unlock" class="pb main" style="flex:none;padding:14px 26px">Unlock with fingerprint</button><button id="lockCancel" class="pb" style="flex:none;padding:12px 26px;display:none">Cancel</button><small style="color:var(--sub);max-width:260px">Forgot the PIN? Clear the app's data in Android settings.</small></div>
 <div id="set">
 <h2>Settings</h2>
 <label>Server address</label><input id="url" placeholder="https://your-link.onrender.com" autocapitalize="off">
 <label>Pairing code (same one on the USB Desktop, 8+ characters)</label><input id="code" autocapitalize="off">
 <label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px"><input type="checkbox" id="speak"> Read answers out loud</label>
-<div class="sec"><label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:0"><input type="checkbox" id="lockOpt"> 🔒 Lock the app (fingerprint, or my phone PIN/pattern)</label><small>Optional, off by default. When on, the app asks for your fingerprint, or the PIN/pattern you use to unlock your phone, when you open it.</small></div>
+<div class="sec"><b>🔒 App lock</b><small style="margin:4px 0 10px">Optional. Both are off by default.</small>
+<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:6px 0"><input type="checkbox" id="lockOpt"> Use my fingerprint</label>
+<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:6px 0"><input type="checkbox" id="pinOpt"> Use a PIN code (4 to 6 digits)</label>
+<div class="row"><button class="pb" id="pinChange" style="display:none">Change PIN</button></div>
+<small>The PIN works on phones with no fingerprint sensor. It keeps people who pick up your phone out of the app.</small></div>
 <div class="sec"><div style="display:flex;justify-content:space-between;align-items:center"><b>App updates</b><span id="verTxt" style="color:var(--sub);font-size:13px"></span></div>
 <label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:10px 0 0"><input type="checkbox" id="updNote"> Tell me when a new app version is out</label>
 <div class="row"><button class="pb" id="updCheck">Check for updates</button></div><small id="updMsg">Screen changes already update by themselves. This is only for bigger app updates.</small></div>
@@ -109,27 +115,62 @@ async function toggleMic(){
 if(SR){SR.addListener('partialResults',d=>{if(d.matches&&d.matches[0]){heard=d.matches[0];$('t').value=heard}});
   SR.addListener('listeningState',d=>{if(d.status==='stopped'){listening=false;$('mic').classList.remove('rec');if(heard)send(heard);heard=''}})}
 $('mic').onclick=toggleMic;document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>send(c.textContent));
-$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';$('lockOpt').checked=L.lock==='1';$('updNote').checked=L.updnote!=='0';$('verTxt').textContent='Build '+(L.build||'?');$('set').style.display='flex'};
+$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';syncLockUi();$('updNote').checked=L.updnote!=='0';$('verTxt').textContent='Build '+(L.build||'?');$('set').style.display='flex'};
 $('save').onclick=()=>{L.url=$('url').value.trim();L.code=$('code').value.trim();L.speak=$('speak').checked?'1':'0';$('set').style.display='none';status()};
 $('clear').onclick=()=>{$('log').innerHTML='';saveLog()};
 if(!cfg().url)add('Welcome! Tap Settings, add your server address and a pairing code, then tap 🎤 and talk.','sys');
 status();setInterval(status,20000);
 
-// ---- optional fingerprint lock (off unless you turn it on in Settings) ----
+// ---- optional app lock: fingerprint and/or PIN (everything off unless you turn it on in Settings) ----
 const S=sessionStorage, BIO=cap&&cap.Plugins&&cap.Plugins.BiometricAuthNative;
 async function bioAuth(reason){if(!BIO)throw new Error('missing');await BIO.internalAuthenticate({reason,androidTitle:'USB Link',cancelTitle:'Cancel',allowDeviceCredential:true})}
-function showLock(){$('lock').style.display='flex';$('lockmsg').textContent=''}
-async function tryUnlock(){try{await bioAuth('Unlock USB Link');S.unlocked='1';$('lock').style.display='none'}catch(e){$('lockmsg').textContent='Not unlocked. Tap Unlock to try again.'}}
-if(L.lock==='1'&&S.unlocked!=='1'){showLock();setTimeout(tryUnlock,400)}
+const lockOn=()=>L.lock==='1'||L.pinOn==='1';
+let pad={mode:'unlock',buf:'',first:''};
+const hex=async t=>{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')};
+const drawDots=()=>{$('dots').textContent=Array.from({length:6},(_,i)=>i<pad.buf.length?'●':'○').join(' ')};
+const lmsg=t=>{$('lockmsg').textContent=t||''};
+function bad(t){lmsg(t);pad.buf='';drawDots();$('dots').classList.remove('shake');void $('dots').offsetWidth;$('dots').classList.add('shake')}
+function showLock(mode){
+  pad={mode:mode||'unlock',buf:'',first:''};$('lock').style.display='flex';
+  const pin=L.pinOn==='1'||pad.mode!=='unlock';
+  $('pad').style.display=pin?'grid':'none';$('dots').style.display=pin?'block':'none';
+  $('unlock').style.display=(pad.mode==='unlock'&&L.lock==='1'&&BIO)?'block':'none';
+  $('lockCancel').style.display=pad.mode==='unlock'?'none':'block';
+  $('lockTitle').textContent=pad.mode==='unlock'?'USB Link is locked':'Choose a PIN';
+  lmsg(pad.mode==='unlock'?(pin?'Enter your PIN':''):'4 to 6 digits, then tap ✓');drawDots();
+}
+const hideLock=()=>{$('lock').style.display='none'};
+async function press(k){
+  if(k==='⌫'){pad.buf=pad.buf.slice(0,-1);drawDots();return}
+  if(k!=='✓'){if(pad.buf.length<6){pad.buf+=k;drawDots()}return}
+  if(pad.buf.length<4){bad('Use at least 4 digits');return}
+  if(pad.mode==='unlock'){
+    if(Date.now()<(+S.until||0)){bad('Too many tries. Wait a little.');return}
+    if(await hex((L.pins||'')+pad.buf)===L.pinh){S.unlocked='1';S.tries=0;hideLock();return}
+    S.tries=(+S.tries||0)+1;if(S.tries>=5){S.until=Date.now()+30000;S.tries=0;bad('Too many tries. Wait 30 seconds.')}else bad('Wrong PIN');return;
+  }
+  if(pad.mode==='set1'){pad.first=pad.buf;pad.buf='';pad.mode='set2';$('lockTitle').textContent='Repeat the PIN';lmsg('Type it again, then ✓');drawDots();return}
+  if(pad.mode==='set2'){
+    if(pad.buf!==pad.first){pad.mode='set1';pad.first='';$('lockTitle').textContent='Choose a PIN';bad('They did not match. Start again.');return}
+    const salt=Array.from(crypto.getRandomValues(new Uint8Array(8))).map(x=>x.toString(16)).join('');
+    L.pins=salt;L.pinh=await hex(salt+pad.buf);L.pinOn='1';S.unlocked='1';hideLock();syncLockUi();
+  }
+}
+['1','2','3','4','5','6','7','8','9','⌫','0','✓'].forEach(k=>{const b=document.createElement('button');b.textContent=k;b.onclick=()=>press(k);$('pad').appendChild(b)});
+function syncLockUi(){$('lockOpt').checked=L.lock==='1';$('pinOpt').checked=L.pinOn==='1';$('pinChange').style.display=L.pinOn==='1'?'block':'none'}
+async function tryUnlock(){try{await bioAuth('Unlock USB Link');S.unlocked='1';hideLock()}catch(e){lmsg(L.pinOn==='1'?'Not unlocked. Use your PIN or try the fingerprint again.':'Not unlocked. Tap Unlock to try again.')}}
+if(lockOn()&&S.unlocked!=='1'){showLock();if(L.lock==='1'&&BIO)setTimeout(tryUnlock,400)}
 $('unlock').onclick=tryUnlock;
-document.addEventListener('visibilitychange',()=>{if(document.hidden){S.hid=Date.now()}else if(L.lock==='1'&&S.unlocked==='1'&&Date.now()-(+S.hid||Date.now())>20000){S.unlocked='';showLock();tryUnlock()}});
+$('lockCancel').onclick=()=>{hideLock();syncLockUi()};
+document.addEventListener('visibilitychange',()=>{if(document.hidden){S.hid=Date.now()}else if(lockOn()&&S.unlocked==='1'&&Date.now()-(+S.hid||Date.now())>20000){S.unlocked='';showLock();if(L.lock==='1'&&BIO)tryUnlock()}});
 $('lockOpt').onchange=async()=>{
   if(!$('lockOpt').checked){L.lock='0';return}
-  if(!BIO){$('lockOpt').checked=false;alert('The fingerprint lock needs the newest USB Link app. Install the latest version once, then turn it on.');return}
-  try{const c=await BIO.checkBiometry();if(!c.isAvailable&&!c.deviceIsSecure){$('lockOpt').checked=false;alert('This phone has no screen lock yet. Set a PIN, pattern or password in your phone settings first, then turn this on.');return}
+  if(!BIO){$('lockOpt').checked=false;alert('The fingerprint lock needs the newest USB Link app. Or use the PIN lock below, it works right now.');return}
+  try{const c=await BIO.checkBiometry();if(!c.isAvailable){$('lockOpt').checked=false;alert('This phone has no fingerprint set up. Use the PIN lock below instead.');return}
     await bioAuth('Turn on the app lock');L.lock='1';S.unlocked='1'}catch(e){$('lockOpt').checked=false}
 };
-
+$('pinOpt').onchange=()=>{if($('pinOpt').checked)showLock('set1');else{L.pinOn='0';L.pinh='';L.pins='';syncLockUi()}};
+$('pinChange').onclick=()=>showLock('set1');
 // ---- in-app updater: download the new APK and open the installer (no GitHub page needed) ----
 const FS=cap&&cap.Plugins&&cap.Plugins.Filesystem, FO=cap&&cap.Plugins&&cap.Plugins.FileOpener, REPO='Doreenats232/usb-phone-link';
 const B=+'__BUILD__';if(B)L.build=B;
