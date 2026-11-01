@@ -49,6 +49,7 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 <div class="row"><button id="save" class="pb main">Save</button><button id="clear" class="pb">Clear chat</button></div>
 </div>
 <script>
+(()=>{
 const $=id=>document.getElementById(id), L=localStorage;
 const UIV=2, DEF="https://usb-phone-link.onrender.com";
 const cap=window.Capacitor, SR=cap&&cap.Plugins&&cap.Plugins.SpeechRecognition;
@@ -105,6 +106,8 @@ async function liveUpdate(){
 setTimeout(liveUpdate,800);setInterval(liveUpdate,45000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)liveUpdate()});
 
+
+})();
 </script><script>
 window.addEventListener('load',()=>{try{const L=localStorage;
   if(L.uiTry==='1'){L.uiHtml='';L.uiTry=''}   // last live screen never started: drop it, use the built-in one
