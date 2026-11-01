@@ -36,16 +36,21 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 #set h2{margin:0 0 6px}#set label{color:var(--sub);font-size:13.5px;margin-top:6px}
 #set input[type=text],#set input:not([type]){border:1px solid var(--line);border-radius:14px;background:var(--glass);color:#fff;padding:13px;font-size:16px;outline:none}
 .row{display:flex;gap:10px;margin-top:10px}.pb{flex:1;padding:13px;border-radius:14px;background:var(--glass);border:1px solid var(--line)}.pb.main{background:linear-gradient(135deg,var(--acc),#6a4cf0);border:0}
+#lock{position:fixed;inset:0;z-index:9;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:30px;background:linear-gradient(160deg,var(--bg1),var(--bg2))}
+#lock .av{width:84px;height:84px;font-size:42px;border-radius:26px}#lock h2{margin:6px 0 0}#lockmsg{color:var(--sub);font-size:14px;min-height:20px}
+.sec{margin-top:14px;padding:14px;border-radius:16px;background:var(--glass);border:1px solid var(--line)}.sec small{display:block;color:var(--sub);margin-top:6px;font-size:12.5px}
 </style></head><body>
 <header><div class="av">🤖<div class="dot" id="dot"></div></div><div class="ti"><b>USB Link</b><span id="st">Connecting…</span></div><button class="ib" id="bSet">⚙️</button></header>
 <div id="log"></div>
 <div id="chips"><button class="chip">Open notepad</button><button class="chip">What time is it?</button><button class="chip">Show my homework</button><button class="chip">Sort my icons A to Z</button><button class="chip">Lock the PC</button></div>
 <div id="bar"><button id="mic">🎤</button><input id="t" placeholder="Message your USB…"><button id="send">➤</button></div>
+<div id="lock"><div class="av">🔒</div><h2>USB Link is locked</h2><div id="lockmsg"></div><button id="unlock" class="pb main" style="flex:none;padding:14px 26px">Unlock</button></div>
 <div id="set">
 <h2>Settings</h2>
 <label>Server address</label><input id="url" placeholder="https://your-link.onrender.com" autocapitalize="off">
 <label>Pairing code (same one on the USB Desktop, 8+ characters)</label><input id="code" autocapitalize="off">
 <label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px"><input type="checkbox" id="speak"> Read answers out loud</label>
+<div class="sec"><label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:0"><input type="checkbox" id="lockOpt"> 🔒 Lock the app with my fingerprint</label><small>Optional, off by default. When on, the app asks for your fingerprint (or phone PIN) when you open it.</small></div>
 <div class="row"><button id="save" class="pb main">Save</button><button id="clear" class="pb">Clear chat</button></div>
 </div>
 <script>
@@ -87,11 +92,26 @@ async function toggleMic(){
 if(SR){SR.addListener('partialResults',d=>{if(d.matches&&d.matches[0]){heard=d.matches[0];$('t').value=heard}});
   SR.addListener('listeningState',d=>{if(d.status==='stopped'){listening=false;$('mic').classList.remove('rec');if(heard)send(heard);heard=''}})}
 $('mic').onclick=toggleMic;document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>send(c.textContent));
-$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';$('set').style.display='flex'};
+$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';$('lockOpt').checked=L.lock==='1';$('set').style.display='flex'};
 $('save').onclick=()=>{L.url=$('url').value.trim();L.code=$('code').value.trim();L.speak=$('speak').checked?'1':'0';$('set').style.display='none';status()};
 $('clear').onclick=()=>{$('log').innerHTML='';saveLog()};
 if(!cfg().url)add('Welcome! Tap Settings, add your server address and a pairing code, then tap 🎤 and talk.','sys');
 status();setInterval(status,20000);
+
+// ---- optional fingerprint lock (off unless you turn it on in Settings) ----
+const S=sessionStorage, BIO=cap&&cap.Plugins&&cap.Plugins.BiometricAuthNative;
+async function bioAuth(reason){if(!BIO)throw new Error('missing');await BIO.internalAuthenticate({reason,androidTitle:'USB Link',cancelTitle:'Cancel',allowDeviceCredential:true})}
+function showLock(){$('lock').style.display='flex';$('lockmsg').textContent=''}
+async function tryUnlock(){try{await bioAuth('Unlock USB Link');S.unlocked='1';$('lock').style.display='none'}catch(e){$('lockmsg').textContent='Not unlocked. Tap Unlock to try again.'}}
+if(L.lock==='1'&&S.unlocked!=='1'){showLock();setTimeout(tryUnlock,400)}
+$('unlock').onclick=tryUnlock;
+document.addEventListener('visibilitychange',()=>{if(document.hidden){S.hid=Date.now()}else if(L.lock==='1'&&S.unlocked==='1'&&Date.now()-(+S.hid||Date.now())>20000){S.unlocked='';showLock();tryUnlock()}});
+$('lockOpt').onchange=async()=>{
+  if(!$('lockOpt').checked){L.lock='0';return}
+  if(!BIO){$('lockOpt').checked=false;alert('The fingerprint lock needs the newest USB Link app. Install the latest version once, then turn it on.');return}
+  try{const c=await BIO.checkBiometry();if(!c.isAvailable){$('lockOpt').checked=false;alert('No fingerprint is set up on this phone yet. Add one in your phone settings first.');return}
+    await bioAuth('Turn on the app lock');L.lock='1';S.unlocked='1'}catch(e){$('lockOpt').checked=false}
+};
 // ---- live updates: this app is a window onto the server, so any change there shows up here by itself ----
 function applyHot(h){L.uiTry='1';document.open();document.write(h);document.close()}
 setTimeout(()=>{L.uiTry=''},4000);
