@@ -1,1 +1,1 @@
-{ "appId": "com.daglas.usblink", "appName": "USB Link", "webDir": "www", "backgroundColor": "#14141f", "plugins": { "CapacitorHttp": { "enabled": true } } }
+{ "appId": "com.daglas.usblink", "appName": "USB Link", "webDir": "www", "backgroundColor": "#14141f", "plugins": { "CapacitorHttp": { "enabled": false } } }

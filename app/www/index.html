@@ -59,26 +59,40 @@ const $=id=>document.getElementById(id), L=localStorage;
 const UIV=2, DEF="https://usb-phone-link.onrender.com";
 const cap=window.Capacitor, SR=cap&&cap.Plugins&&cap.Plugins.SpeechRecognition;
 let busy=false, listening=false, heard='';
+const NF=(()=>{try{const f=document.createElement('iframe');f.style.cssText='display:none';document.body.appendChild(f);return f.contentWindow.fetch.bind(f.contentWindow)}catch(e){return fetch.bind(window)}})();
 const cfg=()=>({url:(L.url||DEF).trim().replace(/\/$/,''),code:(L.code||'').trim()});
 function add(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('log').appendChild(d);$('log').scrollTop=1e9;saveLog()}
 function saveLog(){L.log=JSON.stringify([...$('log').children].filter(e=>e.textContent!=='···').slice(-60).map(e=>[e.className.replace('m ','').replace(' typing',''),e.textContent]))}
 try{JSON.parse(L.log||'[]').forEach(([c,t])=>{const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('log').appendChild(d)})}catch{}
-async function api(path,opt={}){const {url,code}=cfg();if(!url||code.length<8)throw new Error('Open Settings: add the server address and an 8+ character pairing code.');
-  const r=await fetch(url+path,{...opt,headers:{'x-pair':code,'content-type':'application/json'}});const j=await r.json();if(!r.ok)throw new Error(j.error||('Error '+r.status));return j}
+async function api(path,opt={}){const {url,code}=cfg();if(!url||code.length<8){const e=new Error('Open Settings: add the server address and an 8+ character pairing code.');e.fatal=1;throw e}
+  const r=await NF(url+path,{...opt,headers:{'x-pair':code,'content-type':'application/json'}});const j=await r.json();if(!r.ok)throw new Error(j.error||('Error '+r.status));return j}
 async function status(){try{const s=await api('/api/status');$('dot').className='dot '+(s.usbOnline?'on':'off');$('st').textContent=s.usbOnline?'USB online · ready':'USB not connected'}catch(e){$('dot').className='dot';$('st').textContent='Not connected'}}
+async function waitReply(id,ty){
+  const start=Date.now();let note=false,fails=0;
+  while(Date.now()-start<10*60e3){
+    try{
+      const r=await api('/api/result?id='+encodeURIComponent(id));fails=0;
+      if(r.done){ty&&ty.remove();L.pend='';add(r.text,'ai');if(L.speak==='1')try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch(e){};return true}
+      if(!r.usbOnline&&!note){note=true;add('USB Desktop is not connected. Open it on the PC (Assistant → Phone → Phone link on).','sys')}
+    }catch(e){
+      if(e.fatal||++fails>30){ty&&ty.remove();add('⚠ '+e.message,'sys');return false}
+      await new Promise(r=>setTimeout(r,2000));
+    }
+  }
+  ty&&ty.remove();add('No answer yet. If the PC is busy, it will appear when you reopen the app.','sys');return false;
+}
+function typing(){const t=document.createElement('div');t.className='m ai typing';t.textContent='···';$('log').appendChild(t);$('log').scrollTop=1e9;return t}
 async function send(text){
   text=(text||'').trim();if(!text||busy)return;busy=true;$('t').value='';add(text,'me');let ty=null;
   try{
     const {id}=await api('/api/send',{method:'POST',body:JSON.stringify({text})});
-    const start=Date.now();let note=false;ty=document.createElement('div');ty.className='m ai typing';ty.textContent='···';$('log').appendChild(ty);$('log').scrollTop=1e9;
-    while(Date.now()-start<5*60e3){
-      const r=await api('/api/result?id='+encodeURIComponent(id));
-      if(r.done){ty&&ty.remove();add(r.text,'ai');if(L.speak==='1')try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch{};break}
-      if(!r.usbOnline&&!note){note=true;add('USB Desktop is not connected. Open it on the PC (Settings → Phone link → On).','sys')}
-    }
-  }catch(e){try{ty&&ty.remove()}catch{};add('⚠ '+e.message,'sys')}
+    L.pend=id;ty=typing();await waitReply(id,ty);
+  }catch(e){try{ty&&ty.remove()}catch(x){};add('⚠ '+e.message,'sys')}
   busy=false;status();
 }
+async function resume(){if(!L.pend||busy)return;busy=true;const ty=typing();await waitReply(L.pend,ty);busy=false;status()}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume()});
+setTimeout(resume,1200);
 $('send').onclick=()=>send($('t').value);$('t').onkeydown=e=>{if(e.key==='Enter')send($('t').value)};
 async function toggleMic(){
   if(!SR){add('Voice needs the Android app.','sys');return}
