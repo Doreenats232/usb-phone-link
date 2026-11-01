@@ -40,13 +40,19 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 #lock .av{width:84px;height:84px;font-size:42px;border-radius:26px}#lock h2{margin:6px 0 0}#lockmsg{color:var(--sub);font-size:14px;min-height:20px}
 #pad{display:none;grid-template-columns:repeat(3,76px);gap:12px;margin-top:6px}#pad button{height:64px;border-radius:50%;background:var(--glass);border:1px solid var(--line);font-size:24px}#pad button:active{background:#8b6cff55}
 #dots{display:none;font-size:26px;letter-spacing:6px;min-height:34px}.shake{animation:shk .35s}@keyframes shk{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#att{width:42px;height:42px;border-radius:50%;background:var(--glass);border:1px solid var(--line);font-size:18px;padding:0}
+#ask{position:fixed;inset:0;z-index:8;background:#000a;display:none;align-items:center;justify-content:center;padding:24px}
+#ask .card{width:100%;max-width:340px;padding:22px;border-radius:24px;background:linear-gradient(160deg,#1d1650,#120f33);border:1px solid var(--line);text-align:center}
+#ask .card b{display:block;font-size:17px;margin-bottom:8px}#ask .card p{margin:0 0 16px;color:#d9d4ff;word-break:break-word}
+.filecard{align-self:flex-start;max-width:84%;padding:12px 14px;border-radius:18px;background:var(--glass);border:1px solid var(--line);cursor:pointer}
 .sec{margin-top:14px;padding:14px;border-radius:16px;background:var(--glass);border:1px solid var(--line)}.sec small{display:block;color:var(--sub);margin-top:6px;font-size:12.5px}
 </style></head><body>
 <header><div class="av">🤖<div class="dot" id="dot"></div></div><div class="ti"><b>USB Link</b><span id="st">Connecting…</span></div><button class="ib" id="bSet">⚙️</button></header>
 <div id="log"></div>
 <div id="chips"><button class="chip">Open notepad</button><button class="chip">What time is it?</button><button class="chip">Show my homework</button><button class="chip">Sort my icons A to Z</button><button class="chip">Lock the PC</button></div>
-<div id="bar"><button id="mic">🎤</button><input id="t" placeholder="Message your USB…"><button id="send">➤</button></div>
+<div id="bar"><button id="mic">🎤</button><button id="att">📎</button><input type="file" id="fi" style="display:none"><input id="t" placeholder="Message your USB…"><button id="send">➤</button></div>
 <div id="lock"><div class="av">🔒</div><h2 id="lockTitle">USB Link is locked</h2><div id="lockmsg"></div><div id="dots"></div><div id="pad"></div><button id="unlock" class="pb main" style="flex:none;padding:14px 26px">Unlock with fingerprint</button><button id="lockCancel" class="pb" style="flex:none;padding:12px 26px;display:none">Cancel</button><small style="color:var(--sub);max-width:260px">Forgot the PIN? Clear the app's data in Android settings.</small></div>
+<div id="ask"><div class="card"><b>🔐 The PC is asking</b><p id="askTxt"></p><div class="row" style="margin-top:0"><button class="pb" id="askNo">Deny</button><button class="pb main" id="askYes">Allow</button></div></div></div>
 <div id="set">
 <h2>Settings</h2>
 <label>Server address</label><input id="url" placeholder="https://your-link.onrender.com" autocapitalize="off">
@@ -57,6 +63,9 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 <label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:6px 0"><input type="checkbox" id="pinOpt"> Use a PIN code (4 to 6 digits)</label>
 <div class="row"><button class="pb" id="pinChange" style="display:none">Change PIN</button></div>
 <small>The PIN works on phones with no fingerprint sensor. It keeps people who pick up your phone out of the app.</small></div>
+<div class="sec"><b>🔔 Notifications</b>
+<label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:10px 0 0"><input type="checkbox" id="notifOpt"> Buzz me for PC alarms, homework due, and answers</label>
+<small>Alarms and homework from your USB Desktop are copied to this phone, so they ring here even when the app is closed.</small></div>
 <div class="sec"><div style="display:flex;justify-content:space-between;align-items:center"><b>App updates</b><span id="verTxt" style="color:var(--sub);font-size:13px"></span></div>
 <label style="display:flex;gap:10px;align-items:center;color:#d9d4ff;font-size:15px;margin:10px 0 0"><input type="checkbox" id="updNote"> Tell me when a new app version is out</label>
 <div class="row"><button class="pb" id="updCheck">Check for updates</button></div><small id="updMsg">Screen changes already update by themselves. This is only for bigger app updates.</small></div>
@@ -76,12 +85,38 @@ try{JSON.parse(L.log||'[]').forEach(([c,t])=>{const d=document.createElement('di
 async function api(path,opt={}){const {url,code}=cfg();if(!url||code.length<8){const e=new Error('Open Settings: add the server address and an 8+ character pairing code.');e.fatal=1;throw e}
   const r=await NF(url+path,{...opt,headers:{'x-pair':code,'content-type':'application/json'}});const j=await r.json();if(!r.ok)throw new Error(j.error||('Error '+r.status));return j}
 async function status(){try{const s=await api('/api/status');$('dot').className='dot '+(s.usbOnline?'on':'off');$('st').textContent=s.usbOnline?'USB online · ready':'USB not connected'}catch(e){$('dot').className='dot';$('st').textContent='Not connected'}}
+const FS2=cap&&cap.Plugins&&cap.Plugins.Filesystem, FO2=cap&&cap.Plugins&&cap.Plugins.FileOpener, LN=cap&&cap.Plugins&&cap.Plugins.LocalNotifications;
+const MIME={txt:'text/plain',pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',mp3:'audio/mpeg',mp4:'video/mp4',zip:'application/zip',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',csv:'text/csv',json:'application/json',html:'text/html',apk:'application/vnd.android.package-archive'};
+const mimeOf=n=>MIME[(n.split('.').pop()||'').toLowerCase()]||'application/octet-stream';
+const nid=t=>{let h=7;for(const c of String(t))h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)%2147483000+1};
+async function notify(title,body){if(L.notif!=='1'||!LN||!document.hidden)return;try{await LN.schedule({notifications:[{id:nid(title+body+Date.now()),title,body:String(body).slice(0,200),schedule:{at:new Date(Date.now()+600)}}]})}catch(e){}}
+// file card for a file the PC sent back
+function fileCard(f){
+  const d=document.createElement('div');d.className='filecard';d.innerHTML='📄 <b></b><br><small style="color:var(--sub)">Tap to open or save</small>';d.querySelector('b').textContent=f.name;
+  d.onclick=async()=>{try{
+    if(FS2&&FO2){await FS2.writeFile({path:f.name,data:f.data,directory:'CACHE',recursive:true});const u=await FS2.getUri({path:f.name,directory:'CACHE'});await FO2.open({filePath:u.uri,contentType:mimeOf(f.name),openWithDefault:false})}
+    else{const a=document.createElement('a');a.href='data:'+mimeOf(f.name)+';base64,'+f.data;a.download=f.name;a.click()}
+  }catch(e){add('⚠ Couldn’t open the file: '+(e.message||e),'sys')}};
+  $('log').appendChild(d);$('log').scrollTop=1e9;
+}
+// approval popup (the PC asked "allow this?")
+let askShown=new Set(), curAsk=null;
+function showAsk(a){curAsk=a.id;$('askTxt').textContent=a.text;$('ask').style.display='flex';notify('🔐 The PC needs your OK',a.text)}
+function hideAsk(){curAsk=null;$('ask').style.display='none'}
+async function answer(allow){const id=curAsk;hideAsk();if(!id)return;try{await api('/api/answer',{method:'POST',body:JSON.stringify({id,allow})});add(allow?'✅ You allowed it.':'⛔ You denied it.','sys')}catch(e){add('⚠ '+e.message,'sys')}}
+$('askYes').onclick=()=>answer(true);$('askNo').onclick=()=>answer(false);
+function handleAsks(asks){
+  const ids=new Set((asks||[]).map(a=>a.id));
+  if(curAsk&&!ids.has(curAsk)){hideAsk();add('Answered on the PC.','sys')}
+  for(const a of asks||[]){if(!askShown.has(a.id)&&!curAsk){askShown.add(a.id);showAsk(a)}}
+}
 async function waitReply(id,ty){
   const start=Date.now();let note=false,fails=0;
   while(Date.now()-start<10*60e3){
     try{
-      const r=await api('/api/result?id='+encodeURIComponent(id));fails=0;
-      if(r.done){ty&&ty.remove();L.pend='';add(r.text,'ai');if(L.speak==='1')try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch(e){};return true}
+      const r=await api('/api/result?id='+encodeURIComponent(id)+'&seen='+encodeURIComponent(curAsk||''));fails=0;
+      handleAsks(r.asks);
+      if(r.done){ty&&ty.remove();L.pend='';hideAsk();add(r.text||'Done.','ai');if(r.file)fileCard(r.file);notify('Morales',r.text||'Done.');if(L.speak==='1')try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch(e){};return true}
       if(!r.usbOnline&&!note){note=true;add('USB Desktop is not connected. Open it on the PC (Assistant → Phone → Phone link on).','sys')}
     }catch(e){
       if(e.fatal||++fails>30){ty&&ty.remove();add('⚠ '+e.message,'sys');return false}
@@ -91,14 +126,42 @@ async function waitReply(id,ty){
   ty&&ty.remove();add('No answer yet. If the PC is busy, it will appear when you reopen the app.','sys');return false;
 }
 function typing(){const t=document.createElement('div');t.className='m ai typing';t.textContent='···';$('log').appendChild(t);$('log').scrollTop=1e9;return t}
-async function send(text){
-  text=(text||'').trim();if(!text||busy)return;busy=true;$('t').value='';add(text,'me');let ty=null;
+async function send(text,file){
+  text=(text||'').trim();if((!text&&!file)||busy)return;busy=true;$('t').value='';
+  add(file?('📎 '+file.name+(text?' · '+text:'')):text,'me');let ty=null;
   try{
-    const {id}=await api('/api/send',{method:'POST',body:JSON.stringify({text})});
+    const {id}=await api('/api/send',{method:'POST',body:JSON.stringify({text,file})});
     L.pend=id;ty=typing();await waitReply(id,ty);
   }catch(e){try{ty&&ty.remove()}catch(x){};add('⚠ '+e.message,'sys')}
   busy=false;status();
 }
+// attach a file to send to the USB
+$('att').onclick=()=>$('fi').click();
+$('fi').onchange=()=>{
+  const f=$('fi').files[0];$('fi').value='';if(!f)return;
+  if(f.size>8*1024*1024){add('That file is over 8 MB. Pick a smaller one.','sys');return}
+  const rd=new FileReader();rd.onload=()=>{const b64=String(rd.result).split(',')[1]||'';send($('t').value,{name:f.name,data:b64})};rd.onerror=()=>add('⚠ Couldn’t read that file.','sys');rd.readAsDataURL(f);
+};
+// ---- notifications: copy the PC's alarms and homework onto this phone as its own scheduled notifications ----
+async function syncEvents(){
+  if(L.notif!=='1'||!LN)return;
+  try{
+    const j=await api('/api/events');const sig=JSON.stringify(j.events||[]);if(sig===L.evsig)return;
+    try{const p=await LN.getPending();const old=(p.notifications||[]).filter(n=>n.extra&&n.extra.src==='usb');if(old.length)await LN.cancel({notifications:old.map(n=>({id:n.id}))})}catch(e){}
+    const list=[],now=Date.now();
+    for(const e of j.events||[]){const [hh,mm]=String(e.time).split(':').map(Number);if(isNaN(hh)||isNaN(mm))continue;
+      if(e.every==='day')list.push({id:nid(e.id),title:e.title,body:e.body,schedule:{on:{hour:hh,minute:mm},allowWhileIdle:true},extra:{src:'usb'}});
+      else if(e.date){const at=new Date(e.date+'T'+e.time+':00');if(at.getTime()>now)list.push({id:nid(e.id),title:e.title,body:e.body,schedule:{at,allowWhileIdle:true},extra:{src:'usb'}})}}
+    if(list.length)await LN.schedule({notifications:list});L.evsig=sig;
+  }catch(e){}
+}
+$('notifOpt').onchange=async()=>{
+  if(!$('notifOpt').checked){L.notif='0';try{const p=await LN.getPending();await LN.cancel({notifications:(p.notifications||[]).filter(n=>n.extra&&n.extra.src==='usb').map(n=>({id:n.id}))})}catch(e){};L.evsig='';return}
+  if(!LN){$('notifOpt').checked=false;alert('Notifications need the newest USB Link app. Update it from Settings → App updates.');return}
+  try{const p=await LN.requestPermissions();if(p.display!=='granted'){$('notifOpt').checked=false;alert('Allow notifications for USB Link in your phone settings first.');return}L.notif='1';L.evsig='';syncEvents()}catch(e){$('notifOpt').checked=false}
+};
+setTimeout(syncEvents,3000);setInterval(syncEvents,10*60e3);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncEvents()});
 async function resume(){if(!L.pend||busy)return;busy=true;const ty=typing();await waitReply(L.pend,ty);busy=false;status()}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume()});
 setTimeout(resume,1200);
@@ -115,7 +178,7 @@ async function toggleMic(){
 if(SR){SR.addListener('partialResults',d=>{if(d.matches&&d.matches[0]){heard=d.matches[0];$('t').value=heard}});
   SR.addListener('listeningState',d=>{if(d.status==='stopped'){listening=false;$('mic').classList.remove('rec');if(heard)send(heard);heard=''}})}
 $('mic').onclick=toggleMic;document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>send(c.textContent));
-$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';syncLockUi();$('updNote').checked=L.updnote!=='0';$('verTxt').textContent='Build '+(L.build||'?');$('set').style.display='flex'};
+$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';syncLockUi();$('notifOpt').checked=L.notif==='1';$('updNote').checked=L.updnote!=='0';$('verTxt').textContent='Build '+(L.build||'?');$('set').style.display='flex'};
 $('save').onclick=()=>{L.url=$('url').value.trim();L.code=$('code').value.trim();L.speak=$('speak').checked?'1':'0';$('set').style.display='none';status()};
 $('clear').onclick=()=>{$('log').innerHTML='';saveLog()};
 if(!cfg().url)add('Welcome! Tap Settings, add your server address and a pairing code, then tap 🎤 and talk.','sys');
