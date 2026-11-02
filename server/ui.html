@@ -124,14 +124,17 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 const $=id=>document.getElementById(id), L=localStorage;
 const UIV=2, DEF="https://usb-phone-link.onrender.com";
 const cap=window.Capacitor, SR=cap&&cap.Plugins&&cap.Plugins.SpeechRecognition;
-let busy=false, listening=false, heard='';
+let busy=false, listening=false, heard='', waiting=0;
 const NF=(()=>{try{const f=document.createElement('iframe');f.style.cssText='display:none';document.body.appendChild(f);return f.contentWindow.fetch.bind(f.contentWindow)}catch(e){return fetch.bind(window)}})();
 const cfg=()=>({url:(L.url||DEF).trim().replace(/\/$/,''),code:(L.code||'').trim()});
 function add(t,c){const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('log').appendChild(d);$('log').scrollTop=1e9;saveLog()}
 function saveLog(){L.log=JSON.stringify([...$('log').children].filter(e=>e.textContent!=='···').slice(-300).map(e=>[e.className.replace('m ','').replace(' typing',''),e.textContent]))}
 try{JSON.parse(L.log||'[]').forEach(([c,t])=>{const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('log').appendChild(d)})}catch{}
 async function api(path,opt={}){const {url,code}=cfg();if(!url||code.length<8){const e=new Error('Open Settings: add the server address and an 8+ character pairing code.');e.fatal=1;throw e}
-  const r=await NF(url+path,{...opt,headers:{'x-pair':code,'content-type':'application/json'}});const j=await r.json();if(!r.ok)throw new Error(j.error||('Error '+r.status));return j}
+  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),path.indexOf('/api/result')===0?45000:75000);
+  try{const r=await NF(url+path,{...opt,signal:ac.signal,headers:{'x-pair':code,'content-type':'application/json'}});const j=await r.json();if(!r.ok)throw new Error(j.error||('Error '+r.status));return j}
+  catch(e){if(e&&e.name==='AbortError')throw new Error('The server did not answer in time. It may be waking up; try again in a minute.');throw e}
+  finally{clearTimeout(to)}}
 async function status(){try{const s=await api('/api/status');$('dot').className='dot '+(s.usbOnline?'on':'off');$('st').textContent=(s.usbOnline?'USB online · ready':'USB not connected')+(hf?' · 🎧 hands-free':'')}catch(e){$('dot').className='dot';$('st').textContent='Not connected'}}
 const FS2=cap&&cap.Plugins&&cap.Plugins.Filesystem, FO2=cap&&cap.Plugins&&cap.Plugins.FileOpener, LN=cap&&cap.Plugins&&cap.Plugins.LocalNotifications;
 const MIME={txt:'text/plain',pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',mp3:'audio/mpeg',mp4:'video/mp4',zip:'application/zip',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',csv:'text/csv',json:'application/json',html:'text/html',apk:'application/vnd.android.package-archive'};
@@ -162,30 +165,41 @@ function handleAsks(asks){
   if(curAsk&&!ids.has(curAsk)){hideAsk();add('Answered on the PC.','sys')}
   for(const a of asks||[]){if(!askShown.has(a.id)&&!curAsk){askShown.add(a.id);showAsk(a)}}
 }
-async function waitReply(id,ty){
-  const start=Date.now();let note=false,fails=0;
-  while(Date.now()-start<10*60e3){
+const WAITS=window.__waits||(window.__waits=new Set());   // ids being waited on right now (survives screen refreshes)
+async function waitReply(id,ty,ctl){
+  if(WAITS.has(id)){ty&&ty.remove();return false}
+  WAITS.add(id);try{return await waitReply0(id,ty,ctl)}finally{WAITS.delete(id)}
+}
+async function waitReply0(id,ty,ctl){
+  ctl=ctl||{};const start=Date.now();let note=false,fails=0;
+  while(Date.now()-start<10*60e3&&!ctl.stop){
     try{
       const r=await api('/api/result?id='+encodeURIComponent(id)+'&seen='+encodeURIComponent(curAsk||''));fails=0;
       handleAsks(r.asks);
-      if(r.done){ty&&ty.remove();L.pend='';hideAsk();lastReply=r.text||'';addAi(r.text||'Done.');if(r.file)fileCard(r.file);notify('Morales',r.text||'Done.');if(L.speak==='1'&&!hf)try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch(e){};return true}
+      if(r.done){ty&&ty.remove();dropPend(id);hideAsk();lastReply=r.text||'';addAi(r.text||'Done.');if(r.file)fileCard(r.file);notify('Morales',r.text||'Done.');if(L.speak==='1'&&!hf)try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(r.text))}catch(e){};return true}
       if(!r.usbOnline&&!note){note=true;add('USB Desktop is not connected. Open it on the PC (Assistant → Phone → Phone link on).','sys')}
     }catch(e){
       if(e.fatal||++fails>30){ty&&ty.remove();add('⚠ '+e.message,'sys');return false}
       await new Promise(r=>setTimeout(r,2000));
     }
   }
-  ty&&ty.remove();add('No answer yet. If the PC is busy, it will appear when you reopen the app.','sys');return false;
+  ty&&ty.remove();dropPend(id);if(!ctl.stop)add('No answer yet. If the PC is busy, it will appear when you reopen the app.','sys');return false;
 }
-function typing(){const t=document.createElement('div');t.className='m ai typing';t.textContent='···';$('log').appendChild(t);$('log').scrollTop=1e9;return t}
+function typing(ctl){const t=document.createElement('div');t.className='m ai typing';t.textContent='···';t.title='Tap to stop waiting';if(ctl)t.onclick=()=>{ctl.stop=true;t.remove()};$('log').appendChild(t);$('log').scrollTop=1e9;return t}
+// commands still waiting for an answer survive closing the app (but never longer than 10 minutes)
+const getPends=()=>{try{return(JSON.parse(L.pends||'[]')||[]).filter(p=>Date.now()-p.t<10*60e3)}catch(e){return[]}};
+const setPends=a=>{L.pends=JSON.stringify(a)};
+const addPend=id=>setPends(getPends().concat([{id,t:Date.now()}]));
+const dropPend=id=>setPends(getPends().filter(p=>p.id!==id));
 async function send(text,file,label){
-  text=(text||'').trim();if((!text&&!file)||busy)return;busy=true;$('t').value='';
+  text=(text||'').trim();if(!text&&!file)return;$('t').value='';
   add(label||(file?('📎 '+file.name+(text?' · '+text:'')):text),'me');let ty=null;
+  waiting++;busy=true;const ctl={};
   try{
     const {id}=await api('/api/send',{method:'POST',body:JSON.stringify({text,file})});
-    L.pend=id;ty=typing();await waitReply(id,ty);
+    addPend(id);ty=typing(ctl);await waitReply(id,ty,ctl);
   }catch(e){try{ty&&ty.remove()}catch(x){};add('⚠ '+e.message,'sys')}
-  busy=false;status();
+  waiting--;busy=waiting>0;status();
 }
 // attach a file to send to the USB
 $('att').onclick=()=>$('fi').click();
@@ -324,7 +338,12 @@ $('notifOpt').onchange=async()=>{
 };
 setTimeout(syncEvents,3000);setInterval(syncEvents,10*60e3);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncEvents()});
-async function resume(){if(!L.pend||busy)return;busy=true;const ty=typing();await waitReply(L.pend,ty);busy=false;status()}
+async function resume(){
+  const ps=getPends();if(!ps.length)return;
+  for(const p of ps){if(resuming.has(p.id)||WAITS.has(p.id))continue;resuming.add(p.id);waiting++;busy=true;const ctl={},ty=typing(ctl);
+    waitReply(p.id,ty,ctl).finally(()=>{resuming.delete(p.id);waiting--;busy=waiting>0;status()})}
+}
+const resuming=new Set();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume()});
 setTimeout(resume,1200);
 $('send').onclick=()=>send($('t').value);$('t').onkeydown=e=>{if(e.key==='Enter')send($('t').value)};
