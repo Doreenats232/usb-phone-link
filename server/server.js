@@ -10,7 +10,7 @@ function room(req, res) {
   const code = String(req.get('x-pair') || '').trim();
   if (code.length < 8) { res.status(401).json({ error: 'Pairing code must be at least 8 characters.' }); return null; }
   const id = sha(code); let r = rooms.get(id);
-  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], study: null, studyTs: 0, usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
+  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], study: null, studyTs: 0, state: null, usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
   r.last = Date.now(); return r;
 }
 // forget idle rooms and old items
@@ -56,7 +56,9 @@ app.get('/api/result', async (req, res) => {
   res.json({ done: false, usbOnline: Date.now() - r.usbSeen < 20e3, asks: open().map(a => ({ id: a.id, text: a.text })) });
 });
 // phone -> is the USB online?
-app.get('/api/status', (req, res) => { const r = room(req, res); if (!r) return; res.json({ usbOnline: Date.now() - r.usbSeen < 20e3, waiting: r.cmds.length }); });
+app.get('/api/status', (req, res) => { const r = room(req, res); if (!r) return; res.json({ usbOnline: Date.now() - r.usbSeen < 20e3, waiting: r.cmds.length, state: r.state }); });
+// USB -> publishes its mode (full access on/off and when it ends)
+app.post('/api/state', (req, res) => { const r = room(req, res); if (!r) return; const b = req.body || {}; r.state = { full: !!b.full, until: Math.max(0, Number(b.until) || 0) }; res.json({ ok: true }); });
 // USB -> next command (long poll)
 app.get('/api/poll', async (req, res) => {
   const r = room(req, res); if (!r) return; const end = Date.now() + 25e3;

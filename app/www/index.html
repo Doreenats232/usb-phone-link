@@ -60,6 +60,8 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 #clipm .card{width:100%;max-width:360px;padding:20px;border-radius:24px;background:linear-gradient(160deg,var(--card1),var(--card2));border:1px solid var(--line)}
 #clipm textarea{width:100%;height:130px;border-radius:14px;border:1px solid var(--line);background:var(--glass);color:var(--txt);padding:12px;font:inherit;resize:none;outline:none}
 .cpy{margin-top:8px;padding:6px 12px;border-radius:12px;background:var(--accA);font-size:13px}
+body.full header{box-shadow:0 0 0 2px #ff8a5cbb,0 0 18px #ff8a5c66}
+.sec select{width:100%;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--glass);color:var(--txt);padding:11px;font:inherit}.sec select option{color:#000}
 .sec{margin-top:14px;padding:14px;border-radius:16px;background:var(--glass);border:1px solid var(--line)}.sec small{display:block;color:var(--sub);margin-top:6px;font-size:12.5px}
 
 .sh-head{display:flex;align-items:center;gap:10px;padding:12px 14px}.sh-head b{flex:1;font-size:18px}.sh-head small{color:var(--sub);font-size:12px}
@@ -107,6 +109,10 @@ button{border:0;font:inherit;color:var(--txt);cursor:pointer}
 <div class="row"><button class="pb" id="pinChange" style="display:none">Change PIN</button></div>
 <small>The PIN works on phones with no fingerprint sensor. It keeps people who pick up your phone out of the app.</small></div>
 <div class="sec"><b>🎨 Theme</b><div class="sw" id="sw"></div></div>
+<div class="sec"><b>🔓 Full access</b>
+<label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:10px 0 0"><input type="checkbox" id="fullOpt"> Let the AI act without asking me</label>
+<select id="fullDur"><option value="15">for 15 minutes</option><option value="60" selected>for 1 hour</option><option value="480">for 8 hours</option><option value="0">until I turn it off</option></select>
+<small id="fullNote">While it is on, the AI will not ask before opening or closing things, running commands, reading files or using the browser. It still asks before sending email and before dangerous commands (like formatting a drive), and it never types into password boxes. Only the phone can switch this on, never the AI.</small></div>
 <div class="sec"><b>🎧 Hands-free</b>
 <label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:10px 0 6px"><input type="checkbox" id="needWake"> Only answer when I say the wake word</label>
 <input id="wakeW" placeholder="Wake word (default: morales)" autocapitalize="off">
@@ -135,7 +141,10 @@ async function api(path,opt={}){const {url,code}=cfg();if(!url||code.length<8){c
   try{const r=await NF(url+path,{...opt,signal:ac.signal,headers:{'x-pair':code,'content-type':'application/json'}});const j=await r.json();if(!r.ok)throw new Error(j.error||('Error '+r.status));return j}
   catch(e){if(e&&e.name==='AbortError')throw new Error('The server did not answer in time. It may be waking up; try again in a minute.');throw e}
   finally{clearTimeout(to)}}
-async function status(){try{const s=await api('/api/status');$('dot').className='dot '+(s.usbOnline?'on':'off');$('st').textContent=(s.usbOnline?'USB online · ready':'USB not connected')+(hf?' · 🎧 hands-free':'')}catch(e){$('dot').className='dot';$('st').textContent='Not connected'}}
+let pcState=null;
+function fullOn(){return !!(pcState&&pcState.full&&(!pcState.until||pcState.until>Date.now()))}
+function drawFull(){const on=fullOn();document.body.classList.toggle('full',on);try{$('fullOpt').checked=on}catch(e){}}
+async function status(){try{const s=await api('/api/status');pcState=s.state||null;drawFull();$('dot').className='dot '+(s.usbOnline?'on':'off');$('st').textContent=(s.usbOnline?'USB online · ready':'USB not connected')+(hf?' · 🎧 hands-free':'')+(fullOn()?' · 🔓 full access'+(pcState.until?' ('+Math.max(1,Math.round((pcState.until-Date.now())/60000))+' min)':''):'')}catch(e){$('dot').className='dot';$('st').textContent='Not connected'}}
 const FS2=cap&&cap.Plugins&&cap.Plugins.Filesystem, FO2=cap&&cap.Plugins&&cap.Plugins.FileOpener, LN=cap&&cap.Plugins&&cap.Plugins.LocalNotifications;
 const MIME={txt:'text/plain',pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',mp3:'audio/mpeg',mp4:'video/mp4',zip:'application/zip',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',csv:'text/csv',json:'application/json',html:'text/html',apk:'application/vnd.android.package-archive'};
 const mimeOf=n=>MIME[(n.split('.').pop()||'').toLowerCase()]||'application/octet-stream';
@@ -317,6 +326,16 @@ function renderTt(b){
 function openStudy(){$('study').style.display='flex';stRender();stLoad()}
 $('stBack').onclick=()=>{$('study').style.display='none'};
 $('tabHw').onclick=()=>{stTab='hw';stRender()};$('tabTt').onclick=()=>{stTab='tt';stRender()};
+
+// ---- full access: the AI acts without asking (switched here on the phone only) ----
+$('fullOpt').onchange=async()=>{
+  const want=$('fullOpt').checked,dur=$('fullDur').value;
+  if(want&&!confirm('Turn on full access?\n\nThe AI will act on your PC WITHOUT asking: opening and closing things, running commands, reading files, using the browser.\n\nIt will still ask before sending email and before dangerous commands.\n\nOnly continue if you are sure.')){$('fullOpt').checked=false;return}
+  $('fullNote').textContent='Saving…';
+  try{const m=await quiet('/fullaccess '+(want?'on '+dur:'off'));add(m||(want?'🔓 Full access is on.':'🔒 Full access is off.'),'sys');await sleep2(400);status()}
+  catch(e){$('fullOpt').checked=!want;add('⚠ '+e.message,'sys')}
+  $('fullNote').textContent='While it is on, the AI will not ask before opening or closing things, running commands, reading files or using the browser. It still asks before sending email and before dangerous commands (like formatting a drive), and it never types into password boxes. Only the phone can switch this on, never the AI.';
+};
 // ---- notifications: copy the PC's alarms and homework onto this phone as its own scheduled notifications ----
 async function syncEvents(){
   if(L.notif!=='1'||!LN)return;
