@@ -84,6 +84,17 @@ body.full header{box-shadow:0 0 0 2px #ff8a5cbb,0 0 18px #ff8a5c66}
 .hit{outline:2px solid var(--acc2);outline-offset:2px}
 #srQ{flex:1;border:1px solid var(--line);border-radius:14px;background:var(--glass);color:var(--txt);padding:11px 14px;font-size:16px;outline:none;min-width:0}
 .sr{padding:10px 12px;border-radius:14px;background:var(--glass);border:1px solid var(--line);margin-bottom:8px}.sr small{color:var(--sub)}
+#files{position:fixed;inset:0;z-index:6;background:linear-gradient(160deg,var(--bg1),var(--bg2));display:none;flex-direction:column;padding-top:env(safe-area-inset-top)}
+#fsPath{padding:0 16px 8px;color:var(--sub);font-size:13px;word-break:break-all}
+#fsBody{flex:1;overflow:auto;padding:4px 14px calc(18px + env(safe-area-inset-bottom))}
+.fr{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:var(--glass);border:1px solid var(--line);margin-bottom:8px;cursor:pointer}.fr:active{background:var(--accA)}
+.fr i{font-style:normal;font-size:24px}.fr>div{flex:1;min-width:0;word-break:break-word}.fr small{display:block;color:var(--sub);font-size:12px}
+#fsAct{position:fixed;inset:0;z-index:8;background:#000a;display:none;align-items:flex-end}
+#fsAct .sheet{width:100%;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:linear-gradient(160deg,var(--card1),var(--card2));border:1px solid var(--line)}
+#fsAct h3{margin:0 0 12px;text-align:center;font-size:16px;word-break:break-all}#fsAct .pb{display:block;width:100%;margin-top:8px}
+#fsName{position:fixed;inset:0;z-index:8;background:#000a;display:none;align-items:center;justify-content:center;padding:22px}
+#fsName .card{width:100%;max-width:340px;padding:20px;border-radius:24px;background:linear-gradient(160deg,var(--card1),var(--card2));border:1px solid var(--line)}
+#fsName input{width:100%;border:1px solid var(--line);border-radius:14px;background:var(--glass);color:var(--txt);padding:12px;font-size:16px;outline:none}
 </style></head><body>
 <header><div class="av">🤖<div class="dot" id="dot"></div></div><div class="ti"><b>USB Link</b><span id="st">Connecting…</span></div><button class="ib" id="hfBtn">🎧</button><button class="ib" id="qaBtn">⚡</button><button class="ib" id="bSet">⚙️</button></header>
 <div id="log"></div>
@@ -95,6 +106,10 @@ body.full header{box-shadow:0 0 0 2px #ff8a5cbb,0 0 18px #ff8a5c66}
 <div id="study"><div class="sh-head"><button class="ib" id="stBack">‹</button><b>📚 Study</b><small id="stNote"></small></div>
 <div class="tabs"><button id="tabHw" class="on">Homework</button><button id="tabTt">Timetable</button></div><div id="stBody"></div></div>
 <div id="srch"><div class="sh-head"><button class="ib" id="srBack">‹</button><input id="srQ" placeholder="Search the chat…" autocapitalize="off"></div><div id="srRes"></div></div>
+<div id="files"><div class="sh-head"><button class="ib" id="fsBack">‹</button><b>📁 USB files</b><small id="fsNote"></small></div>
+<div class="tabs"><button id="fsUp">⬆ Up</button><button id="fsNew">＋ Folder</button><button id="fsUpl">📤 Upload</button></div><div id="fsPath"></div><div id="fsBody"></div><input type="file" id="fsFile" style="display:none"></div>
+<div id="fsAct"><div class="sheet"><h3 id="fsActT"></h3><button class="pb" id="fsDl">⬇ Download to my phone</button><button class="pb" id="fsOpen">🖥 Open on the PC</button><button class="pb" id="fsDel">🗑 Delete (goes to the Recycle Bin)</button><button class="pb" id="fsNo">Cancel</button></div></div>
+<div id="fsName"><div class="card"><b style="display:block;margin-bottom:10px">📁 New folder</b><input id="fsNameIn" placeholder="Folder name" autocapitalize="off"><div class="row"><button class="pb" id="fsNameNo">Cancel</button><button class="pb main" id="fsNameYes">Create</button></div></div></div>
 <datalist id="subjList"></datalist>
 <div id="viewer"><img id="vimg"></div>
 <div id="ask"><div class="card"><b>🔐 The PC is asking</b><p id="askTxt"></p><div class="row" style="margin-top:0"><button class="pb" id="askNo">Deny</button><button class="pb main" id="askYes">Allow</button></div></div></div>
@@ -224,9 +239,9 @@ const QA=[['🔒','Lock','/lock','Lock the PC'],['😴','Sleep','/sleep','Put th
  ['⏮','Previous','/media prev','Previous track'],['⏯','Play / Pause','/media play','Play / pause'],['⏭','Next','/media next','Next track'],
  ['📋','Send to PC clip','@clipset','Send text to the PC clipboard'],['📥','PC clipboard','/clipget','Get the PC clipboard'],['🕘','Clip history','/clips','PC clipboard history'],['✅','To-do','/todo','My to-do list'],['🔎','Read screen text','/ocr screen','Read the text on my PC screen'],['🎙','Wake word','/wake toggle','Wake word on/off'],['📊','Status','/status','PC status'],['🖥️','Screen','/screen','Show my PC screen'],['↩️','Undo','/undo','Undo the last change'],
  ['🗂️','Files','/open files','Open Files'],['📝','Notepad','/open notepad','Open Notepad'],['🌐','Browser','/open web','Open the Browser'],
- ['🧹','Tidy icons','/tidy','Tidy the icons'],['🔤','Sort A–Z','/sort az','Sort icons A to Z'],['🤖','Assistant','/open ai','Open the Assistant'],['📚','Study','@study','Study'],['🔍','Search chat','@search','Search the chat']];
+ ['🧹','Tidy icons','/tidy','Tidy the icons'],['🔤','Sort A–Z','/sort az','Sort icons A to Z'],['🤖','Assistant','/open ai','Open the Assistant'],['📚','Study','@study','Study'],['🔍','Search chat','@search','Search the chat'],['📁','Browse USB','@files','Browse the USB files']];
 QA.forEach(q=>{const b=document.createElement('button');b.className='qt';b.innerHTML='<i>'+q[0]+'</i>'+q[1];
-  b.onclick=()=>{if(q[4]&&!confirm(q[4]))return;$('qa').style.display='none';if(q[2]==='@study'){openStudy();return}if(q[2]==='@search'){openSearch();return}if(q[2]==='@clipset'){$('clipTxt').value='';$('clipm').style.display='flex';try{navigator.clipboard.readText().then(t=>{if(t)$('clipTxt').value=t}).catch(()=>{})}catch(e){}return}send(q[2],null,q[0]+' '+q[3])};$('qg').appendChild(b)});
+  b.onclick=()=>{if(q[4]&&!confirm(q[4]))return;$('qa').style.display='none';if(q[2]==='@study'){openStudy();return}if(q[2]==='@search'){openSearch();return}if(q[2]==='@files'){openFiles();return}if(q[2]==='@clipset'){$('clipTxt').value='';$('clipm').style.display='flex';try{navigator.clipboard.readText().then(t=>{if(t)$('clipTxt').value=t}).catch(()=>{})}catch(e){}return}send(q[2],null,q[0]+' '+q[3])};$('qg').appendChild(b)});
 $('qaBtn').onclick=()=>{$('qa').style.display='flex'};
 $('qa').onclick=e=>{if(e.target===$('qa'))$('qa').style.display='none'};
 $('clipNo').onclick=()=>{$('clipm').style.display='none'};
@@ -327,6 +342,73 @@ function openStudy(){$('study').style.display='flex';stRender();stLoad()}
 $('stBack').onclick=()=>{$('study').style.display='none'};
 $('tabHw').onclick=()=>{stTab='hw';stRender()};$('tabTt').onclick=()=>{stTab='tt';stRender()};
 
+// ---- file browser: look through the USB, download, upload, make folders, delete (to the PC Recycle Bin) ----
+let fsPath='', fsSel=null, fsBusy=false;
+async function rpc(text,file){
+  const {id}=await api('/api/send',{method:'POST',body:JSON.stringify({text,file})});
+  const end=Date.now()+90e3;let seen='';
+  while(Date.now()<end){const r=await api('/api/result?id='+encodeURIComponent(id)+'&seen='+encodeURIComponent(seen));
+    if(r.done)return r;if(!r.usbOnline)throw new Error('USB Desktop is not connected.');seen=(r.asks||[]).map(a=>a.id).sort().join(',')}
+  throw new Error('The PC took too long.');
+}
+const fsJoin=(p,n)=>p?p+'/'+n:n;
+const fsParent=p=>p.split('/').slice(0,-1).join('/');
+function fsSize(n){return n<1024?n+' B':n<1048576?(n/1024).toFixed(0)+' KB':(n/1048576).toFixed(1)+' MB'}
+function fsNote(t){$('fsNote').textContent=t||''}
+async function fsLoad(path,off,append){
+  if(fsBusy)return;fsBusy=true;fsNote('Loading…');
+  try{
+    const r=await rpc('/fs ls '+(off||0)+'|'+path);const t=r.text||'';
+    if(t.indexOf('FS1\n')!==0){fsNote(t.replace(/^ERR: /,'').slice(0,60));if(!append&&!fsPath&&path==='Desktop'){fsBusy=false;return fsLoad('',0,false)}return}
+    const j=JSON.parse(t.slice(4));fsPath=j.p;$('fsPath').textContent='/'+j.p;
+    const b=$('fsBody');if(!append)b.innerHTML='';
+    const more=b.querySelector('.fsmore');if(more)more.remove();
+    if(!j.items.length&&!append)b.appendChild(el('p','empty','This folder is empty.'));
+    for(const it of j.items){
+      const row=el('div','fr');row.appendChild(el('i',null,it.d?'📁':'📄'));
+      const mid=el('div');mid.appendChild(el('span',null,it.n));
+      mid.appendChild(el('small',null,(it.d?'Folder':fsSize(it.s))+(it.m?' · '+new Date(it.m*1000).toLocaleDateString():'')));row.appendChild(mid);
+      row.onclick=()=>{if(it.d)fsLoad(fsJoin(fsPath,it.n),0,false);else fsMenu(it)};b.appendChild(row)}
+    if(j.next){const m=el('button','pb fsmore','Show more ('+(j.total-j.next)+' left)');m.style.cssText='width:100%;margin-bottom:10px';m.onclick=()=>fsLoad(fsPath,j.next,true);b.appendChild(m)}
+    fsNote(j.total+' item'+(j.total===1?'':'s'));if(!append)b.scrollTop=0;
+  }catch(e){fsNote('⚠ '+e.message)}
+  fsBusy=false;
+}
+function openFiles(){$('files').style.display='flex';if(!$('fsBody').children.length)fsLoad('Desktop',0,false);else fsNote('')}
+function fsMenu(it){fsSel=fsJoin(fsPath,it.n);$('fsActT').textContent=it.n+' · '+fsSize(it.s);$('fsAct').style.display='flex'}
+$('fsAct').onclick=e=>{if(e.target===$('fsAct'))$('fsAct').style.display='none'};$('fsNo').onclick=()=>{$('fsAct').style.display='none'};
+$('fsBack').onclick=()=>{$('files').style.display='none'};
+$('fsUp').onclick=()=>{if(fsPath)fsLoad(fsParent(fsPath),0,false)};
+$('fsDl').onclick=async()=>{
+  const f=fsSel;$('fsAct').style.display='none';if(!f)return;fsNote('Downloading…');
+  try{const r=await rpc('/fs get '+f);
+    if(r.file){$('files').style.display='none';add('📥 '+r.file.name,'sys');fileCard(r.file);fsNote('')}
+    else fsNote((r.text||'Failed').replace(/^ERR: /,'').slice(0,70))}
+  catch(e){fsNote('⚠ '+e.message)}
+};
+$('fsOpen').onclick=async()=>{
+  const f=fsSel;$('fsAct').style.display='none';if(!f)return;fsNote('Opening…');
+  try{const r=await rpc('/fs open '+f);fsNote((r.text||'').replace(/^ERR: /,'').slice(0,70))}catch(e){fsNote('⚠ '+e.message)}
+};
+$('fsDel').onclick=async()=>{
+  const f=fsSel;$('fsAct').style.display='none';if(!f)return;
+  if(!confirm('Move "'+f.split('/').pop()+'" to the PC Recycle Bin?'))return;fsNote('Deleting…');
+  try{const r=await rpc('/fs rm '+f);const t=r.text||'';fsNote(t.replace(/^ERR: /,'').slice(0,70));if(t.indexOf('ERR:')!==0)fsLoad(fsPath,0,false)}catch(e){fsNote('⚠ '+e.message)}
+};
+$('fsNew').onclick=()=>{$('fsNameIn').value='';$('fsName').style.display='flex';setTimeout(()=>$('fsNameIn').focus(),100)};
+$('fsNameNo').onclick=()=>{$('fsName').style.display='none'};
+$('fsNameYes').onclick=async()=>{
+  const n=$('fsNameIn').value.trim();$('fsName').style.display='none';if(!n)return;fsNote('Creating…');
+  try{const r=await rpc('/fs mkdir '+fsPath+'|'+n);const t=r.text||'';fsNote(t.replace(/^ERR: /,'').slice(0,70));if(t.indexOf('ERR:')!==0)fsLoad(fsPath,0,false)}catch(e){fsNote('⚠ '+e.message)}
+};
+$('fsUpl').onclick=()=>$('fsFile').click();
+$('fsFile').onchange=()=>{
+  const f=$('fsFile').files[0];$('fsFile').value='';if(!f)return;
+  if(f.size>8*1024*1024){fsNote('That file is over 8 MB.');return}
+  fsNote('Uploading '+f.name+'…');const rd=new FileReader();
+  rd.onload=async()=>{try{const b64=String(rd.result).split(',')[1]||'';const r=await rpc('/fs put '+fsPath,{name:f.name,data:b64});const t=r.text||'';fsNote(t.replace(/^ERR: /,'').slice(0,70));if(t.indexOf('ERR:')!==0)fsLoad(fsPath,0,false)}catch(e){fsNote('⚠ '+e.message)}};
+  rd.onerror=()=>fsNote('Couldn’t read that file.');rd.readAsDataURL(f);
+};
 // ---- full access: the AI acts without asking (switched here on the phone only) ----
 $('fullOpt').onchange=async()=>{
   const want=$('fullOpt').checked,dur=$('fullDur').value;
