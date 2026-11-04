@@ -102,6 +102,9 @@ body.full header{box-shadow:0 0 0 2px #ff8a5cbb,0 0 18px #ff8a5c66}
 #tpKeys{display:flex;gap:8px;overflow-x:auto;padding:0 14px 8px;scrollbar-width:none}#tpKeys::-webkit-scrollbar{display:none}
 .kc{flex:none;padding:9px 13px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:13.5px;color:var(--lab)}.kc:active{background:var(--accA)}
 .tpt{display:flex;gap:8px;margin:0 14px calc(10px + env(safe-area-inset-bottom))}.tpt input{flex:1;min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--glass);color:var(--txt);padding:12px;font-size:16px;outline:none}.tpt .pb{flex:none;padding:12px 14px}
+#live{position:fixed;inset:0;z-index:6;background:linear-gradient(160deg,var(--bg1),var(--bg2));display:none;flex-direction:column;padding-top:env(safe-area-inset-top)}
+#lvBox{flex:1;overflow:auto;margin:0 10px calc(10px + env(safe-area-inset-bottom));border-radius:18px;background:#000;border:1px solid var(--line);display:grid;place-items:center}
+#lvImg{max-width:100%;max-height:100%;display:block}#lvBox.zoom{place-items:start}#lvBox.zoom #lvImg{max-width:none;max-height:none;width:240%}
 </style></head><body>
 <header><div class="av">🤖<div class="dot" id="dot"></div></div><div class="ti"><b>USB Link</b><span id="st">Connecting…</span></div><button class="ib" id="hfBtn">🎧</button><button class="ib" id="qaBtn">⚡</button><button class="ib" id="bSet">⚙️</button></header>
 <div id="log"></div>
@@ -122,6 +125,8 @@ body.full header{box-shadow:0 0 0 2px #ff8a5cbb,0 0 18px #ff8a5c66}
 <div class="tpb"><button class="pb" id="tpL">Left click</button><button class="pb" id="tpD">Double</button><button class="pb" id="tpR">Right click</button></div>
 <div id="tpKeys"></div>
 <div class="tpt"><input id="tpTxt" placeholder="Type on the PC…" autocapitalize="off"><button class="pb" id="tpType">Type</button><button class="pb main" id="tpEnter">⏎</button></div></div>
+<div id="live"><div class="sh-head"><button class="ib" id="lvBack">‹</button><b>🖥️ Live screen</b><small id="lvNote"></small></div>
+<div class="tabs"><button id="lvPause">⏸ Pause</button><button id="lvZoom">🔍 Zoom</button></div><div id="lvBox"><img id="lvImg" alt=""></div></div>
 <datalist id="subjList"></datalist>
 <div id="viewer"><img id="vimg"></div>
 <div id="ask"><div class="card"><b>🔐 The PC is asking</b><p id="askTxt"></p><div class="row" style="margin-top:0"><button class="pb" id="askNo">Deny</button><button class="pb main" id="askYes">Allow</button></div></div></div>
@@ -251,9 +256,9 @@ const QA=[['🔒','Lock','/lock','Lock the PC'],['😴','Sleep','/sleep','Put th
  ['⏮','Previous','/media prev','Previous track'],['⏯','Play / Pause','/media play','Play / pause'],['⏭','Next','/media next','Next track'],
  ['📋','Send to PC clip','@clipset','Send text to the PC clipboard'],['📥','PC clipboard','/clipget','Get the PC clipboard'],['🕘','Clip history','/clips','PC clipboard history'],['✅','To-do','/todo','My to-do list'],['🔎','Read screen text','/ocr screen','Read the text on my PC screen'],['🎙','Wake word','/wake toggle','Wake word on/off'],['📊','Status','/status','PC status'],['🖥️','Screen','/screen','Show my PC screen'],['↩️','Undo','/undo','Undo the last change'],
  ['🗂️','Files','/open files','Open Files'],['📝','Notepad','/open notepad','Open Notepad'],['🌐','Browser','/open web','Open the Browser'],
- ['🧹','Tidy icons','/tidy','Tidy the icons'],['🔤','Sort A–Z','/sort az','Sort icons A to Z'],['🤖','Assistant','/open ai','Open the Assistant'],['📚','Study','@study','Study'],['🔍','Search chat','@search','Search the chat'],['📁','Browse USB','@files','Browse the USB files'],['🖱️','Touchpad','@pad','Touchpad'],['💾','Back up data','/databackup','Back up my settings and AI history'],['🩺','Health check','/health','Test every feature on the PC']];
+ ['🧹','Tidy icons','/tidy','Tidy the icons'],['🔤','Sort A–Z','/sort az','Sort icons A to Z'],['🤖','Assistant','/open ai','Open the Assistant'],['📚','Study','@study','Study'],['🔍','Search chat','@search','Search the chat'],['📁','Browse USB','@files','Browse the USB files'],['🖱️','Touchpad','@pad','Touchpad'],['💾','Back up data','/databackup','Back up my settings and AI history'],['🩺','Health check','/health','Test every feature on the PC'],['🖥️','Live screen','@live','Watch the PC screen']];
 QA.forEach(q=>{const b=document.createElement('button');b.className='qt';b.innerHTML='<i>'+q[0]+'</i>'+q[1];
-  b.onclick=()=>{if(q[4]&&!confirm(q[4]))return;$('qa').style.display='none';if(q[2]==='@study'){openStudy();return}if(q[2]==='@search'){openSearch();return}if(q[2]==='@files'){openFiles();return}if(q[2]==='@pad'){openPad();return}if(q[2]==='@clipset'){$('clipTxt').value='';$('clipm').style.display='flex';try{navigator.clipboard.readText().then(t=>{if(t)$('clipTxt').value=t}).catch(()=>{})}catch(e){}return}send(q[2],null,q[0]+' '+q[3])};$('qg').appendChild(b)});
+  b.onclick=()=>{if(q[4]&&!confirm(q[4]))return;$('qa').style.display='none';if(q[2]==='@study'){openStudy();return}if(q[2]==='@search'){openSearch();return}if(q[2]==='@files'){openFiles();return}if(q[2]==='@pad'){openPad();return}if(q[2]==='@live'){openLive();return}if(q[2]==='@clipset'){$('clipTxt').value='';$('clipm').style.display='flex';try{navigator.clipboard.readText().then(t=>{if(t)$('clipTxt').value=t}).catch(()=>{})}catch(e){}return}send(q[2],null,q[0]+' '+q[3])};$('qg').appendChild(b)});
 $('qaBtn').onclick=()=>{$('qa').style.display='flex'};
 $('qa').onclick=e=>{if(e.target===$('qa'))$('qa').style.display='none'};
 $('clipNo').onclick=()=>{$('clipm').style.display='none'};
@@ -473,6 +478,29 @@ $('tpL').onclick=()=>tpPush({t:'c',b:'l',n:1});$('tpD').onclick=()=>tpPush({t:'c
 function tpType(enter){const v=$('tpTxt').value;if(v)tpPush({t:'t',text:v});if(enter)tpKey('enter');$('tpTxt').value=''}
 $('tpType').onclick=()=>tpType(false);$('tpEnter').onclick=()=>tpType(true);$('tpTxt').onkeydown=e=>{if(e.key==='Enter')tpType(true)};
 $('tpBack').onclick=()=>{tpEnd(false);$('tpad').style.display='none'};
+// ---- live screen: the PC screen refreshed every second or two (view only) ----
+let LV=false, lvRun=0, lvT0=0;
+const lvSleep=ms=>new Promise(r=>setTimeout(r,ms));
+function lvNote(t){$('lvNote').textContent=t||''}
+async function lvLoop(id){
+  while(LV&&id===lvRun){
+    const t=Date.now();
+    try{
+      const r=await rpc('/screen live');if(!LV||id!==lvRun)break;
+      if(r.file){$('lvImg').src='data:image/jpeg;base64,'+r.file.data;lvNote(((Date.now()-t)/1000).toFixed(1)+'s · '+Math.round(r.file.data.length*0.75/1024)+' KB')}
+      else lvNote((r.text||'No picture').slice(0,50));
+    }catch(e){lvNote('⚠ '+String(e.message).slice(0,40));await lvSleep(3000)}
+    if(Date.now()-lvT0>10*60e3){lvStop('Paused to save data');break}
+    await lvSleep(300);
+  }
+}
+function lvStart(){if(LV)return;LV=true;lvT0=Date.now();$('lvPause').textContent='⏸ Pause';lvLoop(++lvRun)}
+function lvStop(msg){LV=false;lvRun++;$('lvPause').textContent='▶ Resume';if(msg)lvNote(msg)}
+function openLive(){$('live').style.display='flex';lvNote('Loading…');lvStart()}
+$('lvPause').onclick=()=>{if(LV)lvStop('Paused');else{lvNote('Loading…');lvStart()}};
+$('lvZoom').onclick=()=>$('lvBox').classList.toggle('zoom');
+$('lvBack').onclick=()=>{lvStop('');$('live').style.display='none'};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&LV)lvStop('Paused')});
 // ---- full access: the AI acts without asking (switched here on the phone only) ----
 $('fullOpt').onchange=async()=>{
   const want=$('fullOpt').checked,dur=$('fullDur').value;
