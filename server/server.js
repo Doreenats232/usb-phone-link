@@ -10,7 +10,7 @@ function room(req, res) {
   const code = String(req.get('x-pair') || '').trim();
   if (code.length < 8) { res.status(401).json({ error: 'Pairing code must be at least 8 characters.' }); return null; }
   const id = sha(code); let r = rooms.get(id);
-  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], study: null, studyTs: 0, state: null, input: [], inWait: [], usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
+  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], study: null, studyTs: 0, state: null, input: [], inWait: [], alerts: [], aseq: 0, usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
   r.last = Date.now(); return r;
 }
 // forget idle rooms and old items
@@ -92,6 +92,17 @@ app.post('/api/study', (req, res) => { const r = room(req, res); if (!r) return;
   r.study = { hw, lessons, alarm: !!b.alarm, lead: Math.min(60, Math.max(1, parseInt(b.lead) || 5)) }; r.studyTs = Date.now(); res.json({ ok: true }); });
 app.get('/api/study', (req, res) => { const r = room(req, res); if (!r) return; res.json({ study: r.study, ts: r.studyTs, usbOnline: Date.now() - r.usbSeen < 20e3 }); });
 
+// USB -> short alerts for the phone (battery low, backup failed, download finished). The phone asks for the ones newer than the last it saw.
+app.post('/api/alert', (req, res) => {
+  const r = room(req, res); if (!r) return; const b = req.body || {};
+  r.aseq++; r.alerts.push({ seq: r.aseq, title: String(b.title || '').slice(0, 80), body: String(b.body || '').slice(0, 200), t: Date.now() });
+  if (r.alerts.length > 30) r.alerts.splice(0, r.alerts.length - 30); res.json({ ok: true });
+});
+app.get('/api/alerts', (req, res) => {
+  const r = room(req, res); if (!r) return; const since = parseInt(req.query.since); const now = Date.now();
+  r.alerts = r.alerts.filter(a => now - a.t < 24 * 3600e3);
+  res.json({ seq: r.aseq, alerts: isNaN(since) ? [] : r.alerts.filter(a => a.seq > since) });
+});
 // phone -> mouse/keyboard events (small batches, fire and forget). Only a fixed set of event shapes is accepted.
 const num = (v, lim) => Math.max(-lim, Math.min(lim, Number(v) || 0));
 function cleanInput(e) {

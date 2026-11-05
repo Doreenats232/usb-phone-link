@@ -38,6 +38,8 @@ jobs:
           grep -q "RecognitionService" $M || sed -i 's#</manifest>#    <queries><intent><action android:name="android.speech.RecognitionService" /></intent></queries>\n</manifest>#' $M
           grep -q USE_BIOMETRIC $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_BIOMETRIC" />\n</manifest>#' $M
           grep -q REQUEST_INSTALL_PACKAGES $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>#' $M
+          grep -q "android.permission.CAMERA" $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n</manifest>#' $M
+          grep -q "android.intent.action.SEND" $M || sed -i '0,/<\/intent-filter>/s#</intent-filter>#</intent-filter>\n            <intent-filter>\n                <action android:name="android.intent.action.SEND" />\n                <category android:name="android.intent.category.DEFAULT" />\n                <data android:mimeType="text/plain" />\n                <data android:mimeType="image/*" />\n                <data android:mimeType="application/pdf" />\n            </intent-filter>#' $M
           cat $M
       - name: Robot icon and build number
         working-directory: app

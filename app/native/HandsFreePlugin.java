@@ -53,6 +53,16 @@ public class HandsFreePlugin extends Plugin {
         call.resolve();
     }
 
+    /** Whatever another app shared to USB Link (handed over once). */
+    @PluginMethod
+    public void getShared(PluginCall call) {
+        JSObject r = new JSObject();
+        String s = MainActivity.pendingShare;
+        MainActivity.pendingShare = null;
+        r.put("share", s == null ? "" : s);
+        call.resolve(r);
+    }
+
     @PluginMethod
     public void isRunning(PluginCall call) {
         JSObject r = new JSObject();

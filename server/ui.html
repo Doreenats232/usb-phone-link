@@ -89,9 +89,11 @@ body.full header{box-shadow:0 0 0 2px #ff8a5cbb,0 0 18px #ff8a5c66}
 #fsBody{flex:1;overflow:auto;padding:4px 14px calc(18px + env(safe-area-inset-bottom))}
 .fr{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:var(--glass);border:1px solid var(--line);margin-bottom:8px;cursor:pointer}.fr:active{background:var(--accA)}
 .fr i{font-style:normal;font-size:24px}.fr>div{flex:1;min-width:0;word-break:break-word}.fr small{display:block;color:var(--sub);font-size:12px}
-#fsAct{position:fixed;inset:0;z-index:8;background:#000a;display:none;align-items:flex-end}
-#fsAct .sheet{width:100%;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:linear-gradient(160deg,var(--card1),var(--card2));border:1px solid var(--line)}
-#fsAct h3{margin:0 0 12px;text-align:center;font-size:16px;word-break:break-all}#fsAct .pb{display:block;width:100%;margin-top:8px}
+#fsAct,#shr{position:fixed;inset:0;z-index:8;background:#000a;display:none;align-items:flex-end}
+#fsAct .sheet,#shr .sheet{width:100%;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:linear-gradient(160deg,var(--card1),var(--card2));border:1px solid var(--line)}
+#fsAct h3,#shr h3{margin:0 0 12px;text-align:center;font-size:16px;word-break:break-all}#fsAct .pb,#shr .pb{display:block;width:100%;margin-top:8px}#shrPrev{max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:14px;text-align:center}#shrPrev img{max-width:100%;max-height:150px;border-radius:12px}
+#scan{position:fixed;inset:0;z-index:6;background:linear-gradient(160deg,var(--bg1),var(--bg2));display:none;flex-direction:column;padding-top:env(safe-area-inset-top);overflow:auto}#scan p{margin:0 16px 12px;color:var(--sub);font-size:14px}#scan>.pb{margin:0 16px 8px;display:block;width:calc(100% - 32px)}
+.scbox{margin:14px 16px 10px;padding:14px;border-radius:18px;background:var(--glass);border:1px solid var(--line);white-space:pre-wrap;word-break:break-word;font-size:15px;max-height:45vh;overflow:auto}
 #fsName{position:fixed;inset:0;z-index:8;background:#000a;display:none;align-items:center;justify-content:center;padding:22px}
 #fsName .card{width:100%;max-width:340px;padding:20px;border-radius:24px;background:linear-gradient(160deg,var(--card1),var(--card2));border:1px solid var(--line)}
 #fsName input{width:100%;border:1px solid var(--line);border-radius:14px;background:var(--glass);color:var(--txt);padding:12px;font-size:16px;outline:none}
@@ -127,6 +129,11 @@ body.full header{box-shadow:0 0 0 2px #ff8a5cbb,0 0 18px #ff8a5c66}
 <div class="tpt"><input id="tpTxt" placeholder="Type on the PC…" autocapitalize="off"><button class="pb" id="tpType">Type</button><button class="pb main" id="tpEnter">⏎</button></div></div>
 <div id="live"><div class="sh-head"><button class="ib" id="lvBack">‹</button><b>🖥️ Live screen</b><small id="lvNote"></small></div>
 <div class="tabs"><button id="lvPause">⏸ Pause</button><button id="lvZoom">🔍 Zoom</button></div><div id="lvBox"><img id="lvImg" alt=""></div></div>
+<div id="scan"><div class="sh-head"><button class="ib" id="scBack">‹</button><b>📷 Scan text</b><small id="scNote"></small></div>
+<p>Take a photo of a page or a question. The PC reads the text, then you can ask the AI about it.</p>
+<button class="pb main" id="scCam">📷 Take a photo</button><button class="pb" id="scGal">🖼 Pick from gallery</button><div id="scOut"></div>
+<input type="file" id="scIn1" accept="image/*" capture="environment" style="display:none"><input type="file" id="scIn2" accept="image/*" style="display:none"></div>
+<div id="shr"><div class="sheet"><h3 id="shrT">📥 Shared with USB Link</h3><div id="shrPrev"></div><div id="shrBtns"></div></div></div>
 <datalist id="subjList"></datalist>
 <div id="viewer"><img id="vimg"></div>
 <div id="ask"><div class="card"><b>🔐 The PC is asking</b><p id="askTxt"></p><div class="row" style="margin-top:0"><button class="pb" id="askNo">Deny</button><button class="pb main" id="askYes">Allow</button></div></div></div>
@@ -256,9 +263,9 @@ const QA=[['🔒','Lock','/lock','Lock the PC'],['😴','Sleep','/sleep','Put th
  ['⏮','Previous','/media prev','Previous track'],['⏯','Play / Pause','/media play','Play / pause'],['⏭','Next','/media next','Next track'],
  ['📋','Send to PC clip','@clipset','Send text to the PC clipboard'],['📥','PC clipboard','/clipget','Get the PC clipboard'],['🕘','Clip history','/clips','PC clipboard history'],['✅','To-do','/todo','My to-do list'],['🔎','Read screen text','/ocr screen','Read the text on my PC screen'],['🎙','Wake word','/wake toggle','Wake word on/off'],['📊','Status','/status','PC status'],['🖥️','Screen','/screen','Show my PC screen'],['↩️','Undo','/undo','Undo the last change'],
  ['🗂️','Files','/open files','Open Files'],['📝','Notepad','/open notepad','Open Notepad'],['🌐','Browser','/open web','Open the Browser'],
- ['🧹','Tidy icons','/tidy','Tidy the icons'],['🔤','Sort A–Z','/sort az','Sort icons A to Z'],['🤖','Assistant','/open ai','Open the Assistant'],['📚','Study','@study','Study'],['🔍','Search chat','@search','Search the chat'],['📁','Browse USB','@files','Browse the USB files'],['🖱️','Touchpad','@pad','Touchpad'],['💾','Back up data','/databackup','Back up my settings and AI history'],['🩺','Health check','/health','Test every feature on the PC'],['🖥️','Live screen','@live','Watch the PC screen']];
+ ['🧹','Tidy icons','/tidy','Tidy the icons'],['🔤','Sort A–Z','/sort az','Sort icons A to Z'],['🤖','Assistant','/open ai','Open the Assistant'],['📚','Study','@study','Study'],['🔍','Search chat','@search','Search the chat'],['📁','Browse USB','@files','Browse the USB files'],['🖱️','Touchpad','@pad','Touchpad'],['💾','Back up data','/databackup','Back up my settings and AI history'],['🩺','Health check','/health','Test every feature on the PC'],['🖥️','Live screen','@live','Watch the PC screen'],['📷','Scan text','@scan','Photo to text to AI']];
 QA.forEach(q=>{const b=document.createElement('button');b.className='qt';b.innerHTML='<i>'+q[0]+'</i>'+q[1];
-  b.onclick=()=>{if(q[4]&&!confirm(q[4]))return;$('qa').style.display='none';if(q[2]==='@study'){openStudy();return}if(q[2]==='@search'){openSearch();return}if(q[2]==='@files'){openFiles();return}if(q[2]==='@pad'){openPad();return}if(q[2]==='@live'){openLive();return}if(q[2]==='@clipset'){$('clipTxt').value='';$('clipm').style.display='flex';try{navigator.clipboard.readText().then(t=>{if(t)$('clipTxt').value=t}).catch(()=>{})}catch(e){}return}send(q[2],null,q[0]+' '+q[3])};$('qg').appendChild(b)});
+  b.onclick=()=>{if(q[4]&&!confirm(q[4]))return;$('qa').style.display='none';if(q[2]==='@study'){openStudy();return}if(q[2]==='@search'){openSearch();return}if(q[2]==='@files'){openFiles();return}if(q[2]==='@pad'){openPad();return}if(q[2]==='@live'){openLive();return}if(q[2]==='@scan'){openScan();return}if(q[2]==='@clipset'){$('clipTxt').value='';$('clipm').style.display='flex';try{navigator.clipboard.readText().then(t=>{if(t)$('clipTxt').value=t}).catch(()=>{})}catch(e){}return}send(q[2],null,q[0]+' '+q[3])};$('qg').appendChild(b)});
 $('qaBtn').onclick=()=>{$('qa').style.display='flex'};
 $('qa').onclick=e=>{if(e.target===$('qa'))$('qa').style.display='none'};
 $('clipNo').onclick=()=>{$('clipm').style.display='none'};
@@ -501,6 +508,70 @@ $('lvPause').onclick=()=>{if(LV)lvStop('Paused');else{lvNote('Loading…');lvSta
 $('lvZoom').onclick=()=>$('lvBox').classList.toggle('zoom');
 $('lvBack').onclick=()=>{lvStop('');$('live').style.display='none'};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&LV)lvStop('Paused')});
+// ---- scan text: photo -> the PC reads the text (OCR) -> optionally ask the AI ----
+const scNote=t=>{$('scNote').textContent=t||''};
+function scImg(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{const sc=Math.min(1,1800/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.85).split(',')[1])};
+  im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('Couldn’t open that picture.'))};im.src=u})}
+function openScan(){$('scan').style.display='flex';$('scOut').innerHTML='';scNote('')}
+async function scSend(name,b64){
+  $('scOut').innerHTML='';scNote('Reading the text…');
+  try{
+    const r=await rpc('/ocr photo',{name,data:b64});const t=r.text||'';
+    if(t.indexOf('📋 ')!==0){scNote(t.replace(/^ERR: /,'').slice(0,80));return}
+    const txt=t.slice(3).trim();scNote('');const o=$('scOut');o.innerHTML='';o.appendChild(el('div','scbox',txt));
+    const a=el('button','pb main','🤖 Ask the AI about it');a.style.cssText='margin:0 16px 8px;display:block;width:calc(100% - 32px)';
+    a.onclick=()=>{$('scan').style.display='none';send('Here is text I scanned with my phone camera. If it is a question, answer it. Otherwise explain or summarize it:\n\n'+txt.slice(0,1700),null,'📷 Scanned text → asking the AI')};o.appendChild(a);
+    const c=el('button','pb','📋 Copy the text');c.style.cssText='margin:0 16px 8px;display:block;width:calc(100% - 32px)';c.onclick=()=>{copyText(txt)};o.appendChild(c);
+  }catch(e){scNote('⚠ '+String(e.message).slice(0,60))}
+}
+async function scPick(inp){const f=inp.files[0];inp.value='';if(!f)return;scNote('Preparing the photo…');try{await scSend('scan.jpg',await scImg(f))}catch(e){scNote('⚠ '+String(e.message).slice(0,60))}}
+$('scCam').onclick=()=>$('scIn1').click();$('scGal').onclick=()=>$('scIn2').click();
+$('scIn1').onchange=()=>scPick($('scIn1'));$('scIn2').onchange=()=>scPick($('scIn2'));
+$('scBack').onclick=()=>{$('scan').style.display='none'};
+
+// ---- share to USB: "Share" from any app -> USB Link (needs the newest app) ----
+let shrData=null;
+const shrClose=()=>{$('shr').style.display='none';shrData=null};
+$('shr').onclick=e=>{if(e.target===$('shr'))shrClose()};
+async function checkShare(){
+  try{if(!HF||!HF.getShared)return;const r=await HF.getShared();if(!r||!r.share)return;shrData=JSON.parse(r.share);shrShow()}catch(e){}
+}
+async function shrDo(fn,okmsg){
+  const B=$('shrBtns');B.innerHTML='<p style="text-align:center;color:var(--sub)">Working…</p>';
+  try{const r=await fn();shrClose();add('📥 '+String(r&&r.text||okmsg).slice(0,200),'sys')}catch(e){shrClose();add('⚠ '+e.message,'sys')}
+}
+function shrShow(){
+  const d=shrData;if(!d)return;const P=$('shrPrev'),B=$('shrBtns');P.innerHTML='';B.innerHTML='';
+  const mk=(t,fn,main)=>{const b=el('button','pb'+(main?' main':''),t);b.onclick=fn;B.appendChild(b)};
+  if(d.error){P.textContent='That file is too big to send (over 8 MB).';mk('OK',shrClose)}
+  else if(typeof d.text==='string'){
+    const txt=d.text;P.textContent=txt.slice(0,400);
+    mk('💾 Save as a note on the USB',()=>shrDo(()=>rpc('',{name:'shared-'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')+'.txt',data:btoa(unescape(encodeURIComponent(txt)))}),'Saved to the USB.'),true);
+    mk('📋 Copy to the PC clipboard',()=>shrDo(()=>rpc('/clipset '+txt.slice(0,1800)),'Copied to the PC clipboard.'));
+    mk('🤖 Ask the AI about it',()=>{shrClose();send('This was shared to me:\n\n'+txt.slice(0,1700)+'\n\nExplain it or help me with it.',null,'📥 Shared text → asking the AI')});
+    mk('Cancel',shrClose);
+  }else{
+    const isImg=/\.(jpe?g|png|webp|gif)$/i.test(d.name||'');
+    if(isImg){const im=document.createElement('img');im.src='data:'+mimeOf(d.name)+';base64,'+d.data;P.appendChild(im)}else P.textContent=d.name||'file';
+    mk('💾 Save to the USB (Downloads)',()=>shrDo(()=>rpc('',{name:d.name||'shared',data:d.data}),'Saved to the USB.'),true);
+    if(isImg)mk('🔎 Read the text in it',()=>{const x=shrData;shrClose();$('scan').style.display='flex';scSend(x.name||'scan.jpg',x.data)});
+    mk('Cancel',shrClose);
+  }
+  $('shr').style.display='flex';
+}
+setTimeout(checkShare,1500);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkShare()});
+
+// ---- alerts from the PC (battery low, backup failed, download finished) ----
+async function alertsPoll(){
+  try{
+    const s=parseInt(L.aseq);const j=await api('/api/alerts'+(isNaN(s)?'':'?since='+s));
+    if(isNaN(s)||j.seq<s){L.aseq=String(j.seq);return}
+    for(const a of j.alerts||[]){add('🔔 '+a.title+(a.body?' — '+a.body:''),'sys');notify(a.title,a.body)}
+    if(j.seq!==s)L.aseq=String(j.seq);
+  }catch(e){}
+}
+setTimeout(alertsPoll,4000);setInterval(alertsPoll,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)alertsPoll()});
 // ---- full access: the AI acts without asking (switched here on the phone only) ----
 $('fullOpt').onchange=async()=>{
   const want=$('fullOpt').checked,dur=$('fullDur').value;
