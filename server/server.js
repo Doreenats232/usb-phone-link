@@ -5,12 +5,15 @@ app.use((req, res, next) => { res.set({ 'Access-Control-Allow-Origin': '*', 'Acc
 const rooms = new Map(); // roomId -> { cmds: [], replies: Map, waiters: [], usbSeen: 0, last: 0 }
 const sha = s => crypto.createHash('sha256').update(String(s)).digest('hex').slice(0, 32);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// wait until something wakes this room (a new command, a reply, an approval) or the time is up: replaces fixed sleeps so nothing waits for the next tick
+const waitFor = (r, key, ms) => new Promise(ok => { const l = (r.w[key] = r.w[key] || []); let f; const t = setTimeout(() => { const i = l.indexOf(f); if (i >= 0) l.splice(i, 1); ok(); }, ms); f = () => { clearTimeout(t); ok(); }; l.push(f); });
+const wake = (r, key) => (r.w[key] || []).splice(0).forEach(f => f());
 
 function room(req, res) {
   const code = String(req.get('x-pair') || '').trim();
   if (code.length < 8) { res.status(401).json({ error: 'Pairing code must be at least 8 characters.' }); return null; }
   const id = sha(code); let r = rooms.get(id);
-  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], study: null, studyTs: 0, state: null, input: [], inWait: [], alerts: [], aseq: 0, usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
+  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], study: null, studyTs: 0, state: null, input: [], inWait: [], alerts: [], aseq: 0, w: {}, usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
   r.last = Date.now(); return r;
 }
 // forget idle rooms and old items
@@ -39,7 +42,7 @@ app.post('/api/send', (req, res) => {
   if (!text && !file) return res.status(400).json({ error: 'Empty message.' });
   if (r.cmds.length > 20) return res.status(429).json({ error: 'Too many waiting commands. Is USB Desktop open?' });
   const id = Date.now().toString(36) + (++r.n).toString(36);
-  r.cmds.push({ id, text, file, t: Date.now() }); res.json({ id });
+  r.cmds.push({ id, text, file, t: Date.now() }); wake(r, 'cmd'); res.json({ id });
 });
 // phone -> wait for the answer to one command (long poll). Also reports approval requests from the PC.
 app.get('/api/result', async (req, res) => {
@@ -51,7 +54,7 @@ app.get('/api/result', async (req, res) => {
     const v = r.replies.get(id); if (v) { r.replies.delete(id); return res.json({ done: true, text: v.text, file: v.file || null }); }
     const cur = open().map(a => a.id).sort().join(',');
     if (cur !== seen) return res.json({ done: false, usbOnline: Date.now() - r.usbSeen < 20e3, asks: open().map(a => ({ id: a.id, text: a.text })) });
-    await sleep(500);
+    await waitFor(r, 'rep', 2000);
   }
   res.json({ done: false, usbOnline: Date.now() - r.usbSeen < 20e3, asks: open().map(a => ({ id: a.id, text: a.text })) });
 });
@@ -62,7 +65,7 @@ app.post('/api/state', (req, res) => { const r = room(req, res); if (!r) return;
 // USB -> next command (long poll)
 app.get('/api/poll', async (req, res) => {
   const r = room(req, res); if (!r) return; const end = Date.now() + 25e3;
-  while (Date.now() < end) { r.usbSeen = Date.now(); const c = r.cmds.shift(); if (c) return res.json({ id: c.id, text: c.text, file: c.file || null }); await sleep(700); }
+  while (Date.now() < end) { r.usbSeen = Date.now(); const c = r.cmds.shift(); if (c) return res.json({ id: c.id, text: c.text, file: c.file || null }); await waitFor(r, 'cmd', 5000); }
   res.json({ none: true });
 });
 // USB -> answer
@@ -70,13 +73,13 @@ app.post('/api/reply', (req, res) => {
   const r = room(req, res); if (!r) return;
   let file = null;
   if (req.body.file && req.body.file.data && String(req.body.file.data).length <= 11.5e6) file = { name: String(req.body.file.name || 'file').slice(0, 120), data: String(req.body.file.data) };
-  r.replies.set(String(req.body.id || ''), { text: String(req.body.text || '').slice(0, 6000), file, t: Date.now() }); res.json({ ok: true });
+  r.replies.set(String(req.body.id || ''), { text: String(req.body.text || '').slice(0, 6000), file, t: Date.now() }); wake(r, 'rep'); res.json({ ok: true });
 });
 
 
 // USB -> ask the phone to approve something; phone or PC answers (first answer wins)
 app.post('/api/ask', (req, res) => { const r = room(req, res); if (!r) return; const id = String(req.body.id || ''); if (!id) return res.status(400).json({ error: 'id' });
-  r.asks.set(id, { id, text: String(req.body.text || '').slice(0, 500), t: Date.now(), answer: null }); res.json({ ok: true }); });
+  r.asks.set(id, { id, text: String(req.body.text || '').slice(0, 500), t: Date.now(), answer: null }); wake(r, 'rep'); res.json({ ok: true }); });
 app.post('/api/answer', (req, res) => { const r = room(req, res); if (!r) return; const a = r.asks.get(String(req.body.id || ''));
   if (!a) return res.json({ ok: false, gone: true }); if (a.answer !== null) return res.json({ ok: false, answer: a.answer });
   a.answer = !!req.body.allow; a.t = Date.now(); res.json({ ok: true, answer: a.answer }); });
@@ -139,7 +142,7 @@ const { WebSocketServer } = require('ws');
 const wss = new WebSocketServer({ noServer: true, handleProtocols: p => [...p][0] || false, maxPayload: 256 * 1024 });
 function rtRoom(code) {
   const id = sha(code); let r = rooms.get(id);
-  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], study: null, studyTs: 0, state: null, input: [], inWait: [], alerts: [], aseq: 0, usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
+  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], study: null, studyTs: 0, state: null, input: [], inWait: [], alerts: [], aseq: 0, w: {}, usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
   r.last = Date.now(); if (!r.phones) r.phones = new Set(); return r;
 }
 const send = (ws, o) => { try { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); } catch (e) { } };
