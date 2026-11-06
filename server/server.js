@@ -131,4 +131,49 @@ app.get('/api/input/poll', async (req, res) => {
   ev = take(); res.json(ev.length ? { events: ev } : { none: true });
 });
 
-app.listen(process.env.PORT || 3000, () => console.log('up'));
+const server = app.listen(process.env.PORT || 3000, () => console.log('up'));
+
+// ---- realtime channel (WebSocket): live screen frames USB -> phone, and mouse/keyboard events phone -> USB, with no request per message.
+// Both sides open /ws with the pairing code as the subprotocol ("pc.<code>" or "phone.<code>"), so the code never shows in URLs or logs.
+const { WebSocketServer } = require('ws');
+const wss = new WebSocketServer({ noServer: true, handleProtocols: p => [...p][0] || false, maxPayload: 256 * 1024 });
+function rtRoom(code) {
+  const id = sha(code); let r = rooms.get(id);
+  if (!r) { r = { cmds: [], replies: new Map(), asks: new Map(), events: [], study: null, studyTs: 0, state: null, input: [], inWait: [], alerts: [], aseq: 0, usbSeen: 0, last: 0, n: 0 }; rooms.set(id, r); }
+  r.last = Date.now(); if (!r.phones) r.phones = new Set(); return r;
+}
+const send = (ws, o) => { try { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); } catch (e) { } };
+// what a phone may ask the PC for: input events (same whitelist as the HTTP route) or a live-screen request
+function cleanMsg(raw) {
+  let m; try { m = JSON.parse(raw); } catch (e) { return null; }
+  if (Array.isArray(m)) { const ev = m.slice(0, 80).map(cleanInput).filter(Boolean); return ev.length ? JSON.stringify(ev) : null; }
+  if (m && m.t === 'live') return JSON.stringify({ t: 'live', on: !!m.on, w: Math.max(320, Math.min(1600, parseInt(m.w) || 900)), q: Math.max(25, Math.min(85, parseInt(m.q) || 55)), fps: Math.max(1, Math.min(15, parseInt(m.fps) || 8)) });
+  return null;
+}
+server.on('upgrade', (req, sock, head) => {
+  const proto = String(req.headers['sec-websocket-protocol'] || '').split(',')[0].trim();
+  const m = /^(pc|phone)\.([A-Za-z0-9_.-]{8,100})$/.exec(proto);
+  if (!m || String(req.url || '').split('?')[0] !== '/ws') { sock.destroy(); return; }
+  wss.handleUpgrade(req, sock, head, ws => {
+    const role = m[1], r = rtRoom(m[2]); ws.isAlive = true; ws.on('pong', () => { ws.isAlive = true; });
+    if (role === 'pc') {
+      if (r.pcWs && r.pcWs !== ws) { try { r.pcWs.close(); } catch (e) { } }
+      r.pcWs = ws; r.phones.forEach(p => send(p, { t: 'pc', on: true }));
+      ws.on('message', (data, isBinary) => {   // frames go to every phone that is not already behind
+        if (!isBinary) return; r.last = Date.now();
+        r.phones.forEach(p => { if (p.readyState === 1 && p.bufferedAmount < 1.5e6) { try { p.send(data, { binary: true }); } catch (e) { } } });
+      });
+      ws.on('close', () => { if (r.pcWs === ws) { r.pcWs = null; r.phones.forEach(p => send(p, { t: 'pc', on: false })); } });
+    } else {
+      r.phones.add(ws); send(ws, { t: 'pc', on: !!(r.pcWs && r.pcWs.readyState === 1) });
+      ws.on('message', (data, isBinary) => {
+        if (isBinary || !r.pcWs) return; r.last = Date.now(); const out = cleanMsg(String(data).slice(0, 8000));
+        if (out) { try { r.pcWs.send(out); } catch (e) { } }
+      });
+      ws.on('close', () => { r.phones.delete(ws); if (!r.phones.size) send(r.pcWs, { t: 'live', on: false, w: 900, q: 55, fps: 8 }); });   // nobody watching: stop sending frames
+    }
+    ws.on('error', () => { });
+  });
+});
+// drop dead connections (phones that went to sleep, networks that changed)
+setInterval(() => { wss.clients.forEach(ws => { if (ws.isAlive === false) return ws.terminate(); ws.isAlive = false; try { ws.ping(); } catch (e) { } }); }, 25e3);
