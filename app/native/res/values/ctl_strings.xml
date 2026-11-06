@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ctl_description">Lets the USB Desktop AI use your phone for you (open apps, tap, type and read the screen), but only while you have switched it on inside the USB Link app. It never reads or touches banking, payment, password or settings screens.</string>
+</resources>

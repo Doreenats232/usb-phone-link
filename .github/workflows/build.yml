@@ -27,6 +27,8 @@ jobs:
           D=android/app/src/main/java/com/daglas/usblink
           ls $D
           cp native/*.java $D/
+          mkdir -p android/app/src/main/res/xml android/app/src/main/res/values
+          cp -r native/res/* android/app/src/main/res/
           M=android/app/src/main/AndroidManifest.xml
           grep -q HandsFreeService $M || sed -i 's#</application>#    <service android:name=".HandsFreeService" android:exported="false" android:foregroundServiceType="microphone" />\n    </application>#' $M
           grep -q FOREGROUND_SERVICE_MICROPHONE $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />\n    <uses-permission android:name="android.permission.WAKE_LOCK" />\n</manifest>#' $M
@@ -40,6 +42,8 @@ jobs:
           grep -q REQUEST_INSTALL_PACKAGES $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>#' $M
           grep -q "android.permission.CAMERA" $M || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n</manifest>#' $M
           grep -q "android.intent.action.SEND" $M || sed -i '0,/<\/intent-filter>/s#</intent-filter>#</intent-filter>\n            <intent-filter>\n                <action android:name="android.intent.action.SEND" />\n                <category android:name="android.intent.category.DEFAULT" />\n                <data android:mimeType="text/plain" />\n                <data android:mimeType="image/*" />\n                <data android:mimeType="application/pdf" />\n            </intent-filter>#' $M
+          grep -q PhoneControlService $M || sed -i '/<\/application>/e cat native/manifest-ctl.xml' $M
+          grep -q QUERY_ALL_PACKAGES $M || sed -i '/<\/manifest>/e cat native/manifest-perm.xml' $M
           cat $M
       - name: Robot icon and build number
         working-directory: app

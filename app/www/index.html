@@ -154,6 +154,13 @@ body.full header{box-shadow:0 0 0 2px #ff8a5cbb,0 0 18px #ff8a5c66}
 <label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:10px 0 0"><input type="checkbox" id="fullOpt"> Let the AI act without asking me</label>
 <select id="fullDur"><option value="15">for 15 minutes</option><option value="60" selected>for 1 hour</option><option value="480">for 8 hours</option><option value="0">until I turn it off</option></select>
 <small id="fullNote">While it is on, the AI will not ask before opening or closing things, running commands, reading files or using the browser. It still asks before sending email and before dangerous commands (like formatting a drive), and it never types into password boxes. Only the phone can switch this on, never the AI.</small></div>
+<div class="sec"><b>🤖 AI phone control</b>
+<small id="ctlStatus">Checking…</small>
+<button class="pb" id="ctlSetBtn" style="width:100%;margin-top:8px">1 · Open Accessibility settings</button>
+<small>Find “USB Link AI control” in the list and turn it on. (Android 13+: if it is greyed out, open the app’s info page → ⋮ → Allow restricted settings.)</small>
+<label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:10px 0 0"><input type="checkbox" id="ctlOpt"> 2 · Let the AI control this phone</label>
+<select id="ctlDur"><option value="15">for 15 minutes</option><option value="60" selected>for 1 hour</option><option value="480">for 8 hours</option></select>
+<small>With this on, the AI on your PC can open apps, read the screen, tap and type for you (you still approve each request on the PC unless Full access is on). It can never use banking, payment, password or settings screens. An orange bar shows while it works: tap the bar to stop it. Only this switch on the phone can turn it on.</small></div>
 <div class="sec"><b>🎧 Hands-free</b>
 <label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:10px 0 6px"><input type="checkbox" id="needWake"> Only answer when I say the wake word</label>
 <input id="wakeW" placeholder="Wake word (default: morales)" autocapitalize="off">
@@ -622,6 +629,33 @@ async function alertsPoll(){
   }catch(e){}
 }
 setTimeout(alertsPoll,4000);setInterval(alertsPoll,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)alertsPoll()});
+// ---- AI phone control: lets the PC's AI use this phone (the Android accessibility service does the work; this is the on/off switch) ----
+async function ctlRefresh(){
+  try{
+    if(typeof HF==='undefined'||!HF||!HF.ctlState){$('ctlStatus').textContent='Needs the newest app: install the latest UsbLink.apk.';$('ctlOpt').disabled=true;return}
+    const s=await HF.ctlState(),now=Date.now(),on=s.until>now;
+    $('ctlOpt').disabled=false;$('ctlOpt').checked=on;
+    $('ctlStatus').textContent=(s.service?'✅ Accessibility service is on':'⚠ Step 1 not done: the accessibility service is off')+' · '+(on?'AI control ON, '+Math.ceil((s.until-now)/60000)+' min left':'AI control off');
+  }catch(e){$('ctlStatus').textContent='⚠ '+String(e.message).slice(0,80)}
+}
+$('ctlSetBtn').onclick=async()=>{try{await HF.ctlSettings()}catch(e){alert('Open Android Settings → Accessibility → USB Link AI control.')}};
+$('ctlOpt').onchange=async()=>{
+  const want=$('ctlOpt').checked;
+  try{
+    if(want){
+      const st=await HF.ctlState();
+      if(!st.service){$('ctlOpt').checked=false;alert('First do step 1: turn on “USB Link AI control” in the Accessibility settings.');return}
+      if(!confirm('Let the AI control this phone?\n\nThe AI on your PC will be able to open apps, read the screen, tap and type for you, for the time you picked. It cannot use banking, payment, password or settings screens. An orange bar shows while it works, and tapping the bar stops it.\n\nOnly turn this on if you trust your PC and your pairing code.')){$('ctlOpt').checked=false;return}
+    }
+    const c=cfg(),until=want?Date.now()+parseInt($('ctlDur').value)*60000:0;
+    await HF.ctlConfig({url:c.url,code:c.code,until});
+    add(want?'🤖 AI phone control is ON for '+$('ctlDur').value+' minutes.':'🔒 AI phone control is off.','sys');
+  }catch(e){$('ctlOpt').checked=!want;add('⚠ '+e.message,'sys')}
+  ctlRefresh();
+};
+$('bSet').addEventListener('click',()=>{ctlRefresh()});
+setInterval(()=>{if($('set')&&$('set').style.display!=='none')ctlRefresh()},20000);
+setTimeout(async()=>{try{const s=await HF.ctlState();if(s.until>Date.now()){const c=cfg();await HF.ctlConfig({url:c.url,code:c.code,until:s.until})}}catch(e){}},2500);
 // ---- full access: the AI acts without asking (switched here on the phone only) ----
 $('fullOpt').onchange=async()=>{
   const want=$('fullOpt').checked,dur=$('fullDur').value;

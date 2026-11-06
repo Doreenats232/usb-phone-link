@@ -64,6 +64,40 @@ public class HandsFreePlugin extends Plugin {
         call.resolve(r);
     }
 
+    /** AI phone control: the web screen hands over the relay address, pairing code and the time the user allowed (0 = off). */
+    @PluginMethod
+    public void ctlConfig(PluginCall call) {
+        String url = call.getString("url", "");
+        String code = call.getString("code", "");
+        Double u = call.getDouble("until", 0.0);
+        long until = u == null ? 0L : u.longValue();
+        SharedPreferences sp = getContext().getSharedPreferences(PhoneControlService.PREFS, Context.MODE_PRIVATE);
+        sp.edit().putString("url", url == null ? "" : url).putString("code", code == null ? "" : code).putLong("until", until).apply();
+        call.resolve();
+    }
+
+    /** Is the accessibility service switched on in Android settings, and how long is control allowed for. */
+    @PluginMethod
+    public void ctlState(PluginCall call) {
+        SharedPreferences sp = getContext().getSharedPreferences(PhoneControlService.PREFS, Context.MODE_PRIVATE);
+        JSObject r = new JSObject();
+        r.put("service", PhoneControlService.instance != null);
+        r.put("until", (double) sp.getLong("until", 0L));
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void ctlSettings(PluginCall call) {
+        try {
+            Intent i = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Couldn't open the settings: " + e.getMessage());
+        }
+    }
+
     @PluginMethod
     public void isRunning(PluginCall call) {
         JSObject r = new JSObject();

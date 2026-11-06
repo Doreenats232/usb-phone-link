@@ -134,6 +134,34 @@ app.get('/api/input/poll', async (req, res) => {
   ev = take(); res.json(ev.length ? { events: ev } : { none: true });
 });
 
+// ---- AI phone control: the PC's AI sends one step (open / screen / tap / type / swipe / back / home / wait) and waits for the phone's answer.
+// The phone's accessibility service long-polls here, but only while the user has switched "AI phone control" on in the app.
+app.post('/api/ctl', async (req, res) => {
+  const r = room(req, res); if (!r) return; const b = req.body || {};
+  const cmd = String(b.cmd || '').slice(0, 20), arg = String(b.arg || '').slice(0, 500);
+  if (!/^[a-z]+$/.test(cmd)) return res.status(400).json({ error: 'bad command' });
+  if (Date.now() - (r.ctlSeen || 0) > 25e3) return res.json({ text: 'The phone is not connected. On the phone open USB Link, Settings, AI phone control, and turn it on.' });
+  r.ctl = r.ctl || []; r.ctlRep = r.ctlRep || new Map();
+  const id = Date.now().toString(36) + (++r.n).toString(36);
+  r.ctl.push({ id, cmd, arg, t: Date.now() }); wake(r, 'ctl');
+  const end = Date.now() + 45e3;
+  while (Date.now() < end) { const v = r.ctlRep.get(id); if (v !== undefined) { r.ctlRep.delete(id); return res.json({ text: v }); } await waitFor(r, 'ctlrep', 2000); }
+  res.json({ text: 'The phone did not answer in time.' });
+});
+app.get('/api/ctl/poll', async (req, res) => {
+  const r = room(req, res); if (!r) return; r.ctl = r.ctl || []; const end = Date.now() + 25e3;
+  while (Date.now() < end) {
+    r.ctlSeen = Date.now(); const c = r.ctl.shift();
+    if (c) { if (Date.now() - c.t > 60e3) continue; return res.json(c); }   // never run a step that is more than a minute old
+    await waitFor(r, 'ctl', 5000);
+  }
+  res.json({ none: true });
+});
+app.post('/api/ctl/reply', (req, res) => {
+  const r = room(req, res); if (!r) return; r.ctlRep = r.ctlRep || new Map();
+  r.ctlRep.set(String(req.body.id || ''), String(req.body.text || '').slice(0, 6000)); wake(r, 'ctlrep'); res.json({ ok: true });
+});
+
 const server = app.listen(process.env.PORT || 3000, () => console.log('up'));
 
 // ---- realtime channel (WebSocket): live screen frames USB -> phone, and mouse/keyboard events phone -> USB, with no request per message.
