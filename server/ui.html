@@ -157,6 +157,7 @@ body.full header{box-shadow:0 0 0 2px #ff8a5cbb,0 0 18px #ff8a5c66}
 <div class="sec"><b>🎧 Hands-free</b>
 <label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:10px 0 6px"><input type="checkbox" id="needWake"> Only answer when I say the wake word</label>
 <input id="wakeW" placeholder="Wake word (default: morales)" autocapitalize="off">
+<input id="hfLang" placeholder="Voice language (empty = phone language, e.g. en-GB)" autocapitalize="off">
 <small>Hands-free keeps working with the screen off or other apps open. A notification shows while it listens; tap Stop there to end it. It stops by itself after 30 quiet minutes. The wake word stops it from reacting to random talking.</small></div>
 <div class="sec"><b>🔔 Notifications</b>
 <label style="display:flex;gap:10px;align-items:center;color:var(--lab);font-size:15px;margin:10px 0 0"><input type="checkbox" id="notifOpt"> Buzz me for PC alarms, homework due, and answers</label>
@@ -699,7 +700,7 @@ async function setHfNative(on){
     if(SR){const p=await SR.requestPermissions();if(p.speechRecognition&&p.speechRecognition!=='granted'){add('Allow the microphone for USB Link in Android settings.','sys');return}}
     try{if(LN)await LN.requestPermissions()}catch(e){}
     const c=cfg();if(listening){try{await SR.stop()}catch(e){}}
-    await HF.start({url:c.url,code:c.code,wake:(L.wake||'morales'),needWake:L.needwake!=='0'});
+    await HF.start({url:c.url,code:c.code,wake:(L.wake||'morales'),needWake:L.needwake!=='0',lang:(L.hflang||'')});
     hf=true;hfNative=true;$('hfBtn').classList.add('on');status();
     add('🎧 Hands-free is running in the background'+(L.needwake!=='0'?'. Say “'+(L.wake||'morales')+'” and then what you want.':'. Just talk.')+' Stop it from the notification or tap 🎧.','sys');
     if(!hfPoll)hfPoll=setInterval(drainHf,4000);
@@ -707,12 +708,13 @@ async function setHfNative(on){
 }
 $('hfBtn').onclick=()=>{if(!SR&&!HF){add('Hands-free needs the Android app.','sys');return}setHf(!hf)};
 $('wakeW').onchange=()=>{L.wake=$('wakeW').value.trim()};
+$('hfLang').onchange=()=>{L.hflang=$('hfLang').value.trim()};
 $('needWake').onchange=()=>{L.needwake=$('needWake').checked?'1':'0'};
 setTimeout(()=>{drainHf().then(()=>{if(hfNative&&!hfPoll)hfPoll=setInterval(drainHf,4000)})},900);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)drainHf()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&hf&&!hfNative)setHf(false)});
 $('mic').onclick=toggleMic;document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>send(c.textContent));
-$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';syncLockUi();$('wakeW').value=L.wake||'';$('needWake').checked=L.needwake!=='0';$('notifOpt').checked=L.notif==='1';$('updNote').checked=L.updnote!=='0';$('verTxt').textContent='Build '+(L.build||'?');$('set').style.display='flex'};
+$('bSet').onclick=()=>{$('url').value=L.url||'';$('code').value=L.code||'';$('speak').checked=L.speak==='1';syncLockUi();$('wakeW').value=L.wake||'';$('hfLang').value=L.hflang||'';$('needWake').checked=L.needwake!=='0';$('notifOpt').checked=L.notif==='1';$('updNote').checked=L.updnote!=='0';$('verTxt').textContent='Build '+(L.build||'?');$('set').style.display='flex'};
 $('save').onclick=()=>{L.url=$('url').value.trim();L.code=$('code').value.trim();L.speak=$('speak').checked?'1':'0';$('set').style.display='none';status()};
 $('clear').onclick=()=>{$('log').innerHTML='';saveLog()};
 if(!cfg().url)add('Welcome! Tap Settings, add your server address and a pairing code, then tap 🎤 and talk.','sys');

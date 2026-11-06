@@ -52,7 +52,7 @@ public class HandsFreeService extends Service {
     private boolean ttsReady = false;
     private AudioManager am;
     private PowerManager.WakeLock wl;
-    private String url = "", code = "", wake = "morales";
+    private String url = "", code = "", wake = "morales", lang = "";
     private boolean needWake = true, stopped = false;
     private long lastCmd = 0, followUntil = 0;
     private int errStreak = 0;
@@ -69,6 +69,8 @@ public class HandsFreeService extends Service {
         code = intent.getStringExtra("code") == null ? "" : intent.getStringExtra("code");
         String w = intent.getStringExtra("wake");
         wake = (w == null || w.trim().isEmpty()) ? "morales" : w.trim();
+        String lg = intent.getStringExtra("lang");
+        lang = lg == null ? "" : lg.trim();
         needWake = intent.getBooleanExtra("needWake", true);
         while (url.endsWith("/")) url = url.substring(0, url.length() - 1);
 
@@ -155,14 +157,20 @@ public class HandsFreeService extends Service {
                 @Override public void onResults(Bundle results) {
                     errStreak = 0; muteBeeps(false);
                     ArrayList<String> r = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    handleHeard(r != null && !r.isEmpty() ? r.get(0) : "");
+                    handleHeard(bestOf(r, results.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)));
                 }
             });
             Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
+            // the phone's own language by default (an accent is understood better that way than with a forced en-US); Settings can override it
+            String tag = lang.isEmpty() ? Locale.getDefault().toLanguageTag() : lang;
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, tag);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, tag);
             i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
-            i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+            i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
+            // don't cut the sentence off when you pause to think
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1800L);
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L);
             i.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
             muteBeeps(true);
             rec.startListening(i);
@@ -170,6 +178,30 @@ public class HandsFreeService extends Service {
             errStreak++;
             if (errStreak > 8) fail("Couldn't start listening: " + e.getMessage()); else listen(1500);
         }
+    }
+
+    /** Several guesses come back: prefer one that starts with the wake word, otherwise the one the recognizer is most sure of. */
+    private String bestOf(ArrayList<String> r, float[] conf) {
+        if (r == null || r.isEmpty()) return "";
+        if (needWake && System.currentTimeMillis() > followUntil) {
+            for (String s : r) { if (wakeAt(s.toLowerCase(Locale.ROOT)) != null) return s; }
+        }
+        int best = 0;
+        if (conf != null && conf.length == r.size()) { for (int k = 1; k < conf.length; k++) { if (conf[k] > conf[best]) best = k; } }
+        return r.get(best);
+    }
+
+    /** Where the wake word (or a close way of hearing it, like "morale" or "morals" for "morales") is near the start: {start, end}, or null. */
+    private int[] wakeAt(String low) {
+        String w = wake.toLowerCase(Locale.ROOT);
+        String[] forms = { w, w.endsWith("s") ? w.substring(0, w.length() - 1) : w + "s", w.endsWith("es") ? w.substring(0, w.length() - 2) : w, w.replace(" ", "") };
+        int[] hit = null;
+        for (String f : forms) {
+            if (f.length() < 3) continue;
+            int idx = low.indexOf(f);
+            if (idx >= 0 && idx <= 12 && (hit == null || f.length() > hit[1] - hit[0])) hit = new int[] { idx, idx + f.length() };
+        }
+        return hit;
     }
 
     private void handleError(int error) {
@@ -186,10 +218,9 @@ public class HandsFreeService extends Service {
         if (t.isEmpty()) { listen(250); return; }
         long now = System.currentTimeMillis();
         if (needWake && now > followUntil) {
-            String low = t.toLowerCase(Locale.ROOT), w = wake.toLowerCase(Locale.ROOT);
-            int idx = low.indexOf(w);
-            if (idx < 0 || idx > 12) { listen(250); return; }
-            t = t.substring(idx + w.length()).replaceFirst("^[\\s,.:!?]+", "").trim();
+            int[] at = wakeAt(t.toLowerCase(Locale.ROOT));
+            if (at == null) { listen(250); return; }
+            t = t.substring(at[1]).replaceFirst("^[\\s,.:!?]+", "").trim();
             if (t.isEmpty()) { followUntil = now + 8000; lastCmd = now; speak("Yes?"); return; }
         }
         lastCmd = now;

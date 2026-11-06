@@ -37,6 +37,7 @@ public class HandsFreePlugin extends Plugin {
             i.putExtra("url", url);
             i.putExtra("code", code);
             i.putExtra("wake", wake);
+            i.putExtra("lang", call.getString("lang", ""));
             i.putExtra("needWake", needWake);
             ContextCompat.startForegroundService(getContext(), i);
             call.resolve();
